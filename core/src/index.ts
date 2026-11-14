@@ -9,3 +9,6 @@ export * from './executor';
 export * from './sandbox';
 // Type-only: the SQLite implementations in ./storage must not load in the server or browser bundles.
 export type { AuditEntry, AuditRepository } from './storage/types';
+// Sync protocol types + HLC helpers (pure, no SQLite) for the server's /sync module.
+export * from './sync/types';
+export * from './sync/hlc';

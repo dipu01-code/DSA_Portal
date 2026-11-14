@@ -34,3 +34,10 @@ npm run start -w workers
 - **The spec is enforced, not just documented:** the contract test fails the build if a route or response leaves the spec. Docs are rendered from the same file, so the page can't be stale.
 - **Redoc from a CDN:** zero dependencies and one route. The cost is a third-party script, so the page's CSP allows exactly that origin and nothing else.
 - **README tested by a fresh clone:** the instructions were followed literally from a new clone, so they reflect what actually works.
+
+## Final scan after Persons 2 and 3 merged (2026-11-14)
+
+- **Fixed (Person 1):** `core` exports the sync types and HLC helpers that `server/src/sync` imports. Restored `docs/CHANGE_REQUESTS.md` (CR-002..CR-027 were overwritten in a merge; Person 2's sync CR is now CR-028) and the ~20 lost `.env.example` variables.
+- **Open, for Person 2 (CR-029):** server build fails on 5 type errors in `db/pool.ts` and `sync/sync.controller.ts` (exact patch in the CR, verified: build green, `queue.e2e` passes). Deleting a user fails, because the append-only `audit_log` trigger blocks `ON DELETE SET NULL`. `security-roles.test.ts` uses the dev DB. Prod compose uses `CORS_ORIGIN` instead of `CORS_ORIGINS`.
+- **Results (fresh DB, with the CR-029 build patch):** 29/30 jest suites, 209 passed / 2 skipped; the only failure is the `full-flow.e2e` teardown (user delete, item 2 above). ui-core 54, web 15, mobile 18 tests pass; all client workspaces typecheck clean.
+- **Local dev DB:** it still records `004_session_families` (now `006_`). Recreate it (`npm run db:reset`) before running migrations.
