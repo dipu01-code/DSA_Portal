@@ -1,25 +1,16 @@
 /**
- * Runs the real SQL against Node's built-in SQLite (node:sqlite), wrapped in expo-sqlite's async API.
+ * Runs the real SQL against SQLite (better-sqlite3, works on Node 20 like CI), wrapped in expo-sqlite's async API.
  */
 import { sqliteKv, sqliteLocalStore, type SqlDb } from './local-store';
 import type { Problem } from '@dsa-portal/ui-core';
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { DatabaseSync } = require('node:sqlite') as {
-  DatabaseSync: new (p: string) => {
-    exec(s: string): void;
-    prepare(s: string): {
-      run(...a: unknown[]): unknown;
-      get(...a: unknown[]): unknown;
-      all(...a: unknown[]): unknown[];
-    };
-  };
-};
+import Database from 'better-sqlite3';
 
 function nodeSqlite(): SqlDb {
-  const db = new DatabaseSync(':memory:');
+  const db = new Database(':memory:');
   return {
-    execAsync: async (sql) => db.exec(sql),
+    execAsync: async (sql) => {
+      db.exec(sql);
+    },
     runAsync: async (sql, ...p) => db.prepare(sql).run(...p),
     getFirstAsync: async <T>(sql: string, ...p: Array<string | number>) =>
       (db.prepare(sql).get(...p) as T) ?? null,

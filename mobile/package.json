@@ -28,7 +28,9 @@
   },
   "devDependencies": {
     "@testing-library/react-native": "^12.5.3",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/react": "~18.2.79",
+    "better-sqlite3": "^12.11.1",
     "jest-expo": "~51.0.4",
     "react-test-renderer": "18.2.0",
     "typescript": "^5.4.0"
