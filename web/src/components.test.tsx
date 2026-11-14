@@ -7,6 +7,7 @@ import { mockServer } from '@dsa-portal/ui-core/mocks/node';
 import { dsa } from './platform';
 import { SyncStatus } from './components/SyncStatus';
 import { ResultsPanel } from './components/ResultsPanel';
+import { Splitter } from './components/Splitter';
 import { StatsPage } from './pages/StatsPage';
 import { ProblemPage } from './pages/ProblemPage';
 
@@ -29,6 +30,8 @@ const runInWorker = vi.fn(async (_p: unknown, code: string) => ({
     passed: code.includes('return 1'),
     actual: '1',
     expected: '1',
+    timeMs: 0.5 + i,
+    logs: code.includes('console.log') ? [`log from test ${i + 1}`] : [],
   })),
 }));
 vi.mock('./run-in-worker', () => ({ runInWorker: (...a: [unknown, string]) => runInWorker(...a) }));
@@ -248,5 +251,148 @@ describe('ProblemPage (editor panel)', () => {
     expect(await screen.findByRole('button', { name: 'Judging…' })).toBeTruthy();
     expect(await screen.findByText('Accepted')).toBeTruthy();
     await waitFor(() => expect(screen.getByRole('button', { name: 'Submit' })).toBeTruthy());
+  });
+});
+
+describe('ProblemPage (Stage 2)', () => {
+  it('reveals hints one at a time, then drops the button and focuses the last hint', async () => {
+    ui(<ProblemPage />, '/problem/number-of-islands');
+    fireEvent.click(await screen.findByRole('button', { name: 'Show hint 1' }));
+    expect(await screen.findByText('Think about the brute force first.')).toBeTruthy();
+    fireEvent.click(await screen.findByRole('button', { name: 'Show hint 2' }));
+    expect(await screen.findByText('Can a hash map help?')).toBeTruthy();
+    fireEvent.click(await screen.findByRole('button', { name: 'Show hint 3' }));
+    const last = await screen.findByText('One pass is enough.');
+    expect(screen.queryByRole('button', { name: /Show hint|No more hints/ })).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(last.closest('li')));
+  });
+
+  it('shows the header: title, difficulty, topic, Previous / Next in catalogue order', async () => {
+    ui(<ProblemPage />, '/problem/valid-anagram');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Valid Anagram' })).toBeTruthy();
+    const header = screen.getByRole('heading', { level: 1 }).closest('header')!;
+    expect(header.querySelector('.badge.easy')!.textContent).toBe('Easy');
+    expect(header.querySelector('.badge.tag')!.textContent).toBe('Strings');
+    const pager = await screen.findByRole('navigation', { name: 'Problems' });
+    expect(pager.querySelector('a[href="/problem/two-sum"]')!.textContent).toBe('Previous');
+    expect(pager.querySelector('a[href="/problem/longest-substring"]')!.textContent).toBe('Next');
+  });
+
+  it('shows examples as Input / Output cards with copy buttons', async () => {
+    const writeText = vi.fn(async () => {});
+    Object.assign(navigator, { clipboard: { writeText } });
+    ui(<ProblemPage />, '/problem/two-sum');
+    const ex = await screen.findByRole('region', { name: 'Example 1' });
+    expect(ex.textContent).toContain('Input');
+    expect(ex.textContent).toContain('Output');
+    fireEvent.click(screen.getByRole('button', { name: 'Copy input of example 1' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith('{"nums":[2,7,11,15],"target":9}'));
+    expect(await screen.findByText('Copied')).toBeTruthy();
+  });
+
+  it('Run tests: shortcut in the tooltip, Ctrl/Cmd+Enter runs, Console tab shows the logs', async () => {
+    ui(<ProblemPage />, '/problem/two-sum');
+    const run = await screen.findByRole('button', { name: 'Run tests' });
+    expect(run.title).toBe('Run tests (Ctrl+Enter)'); // jsdom is not a Mac
+    expect(run.getAttribute('aria-keyshortcuts')).toBe('Control+Enter Meta+Enter');
+
+    fireEvent.change(screen.getByLabelText('Code editor'), {
+      target: { value: 'function solve() { console.log("hi"); return 1; }' },
+    });
+    runInWorker.mockClear();
+    fireEvent.keyDown(window, { key: 'Enter', metaKey: true });
+    expect(await screen.findByText('All visible tests pass')).toBeTruthy();
+    expect(runInWorker).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('1.5 ms')).toBeTruthy(); // time per test
+
+    const results = screen.getByRole('tab', { name: 'Results' });
+    expect(results.getAttribute('aria-selected')).toBe('true');
+    fireEvent.keyDown(results, { key: 'ArrowRight' });
+    const consoleTab = screen.getByRole('tab', { name: 'Console' });
+    expect(consoleTab.getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(consoleTab);
+    expect(screen.getByText('log from test 2')).toBeTruthy();
+  });
+
+  it('marks a solved problem with a tick', async () => {
+    ui(<ProblemPage />, '/problem/valid-anagram'); // solved in the "locked solution" test above
+    expect(await screen.findByText('Solved')).toBeTruthy();
+  });
+});
+
+describe('ResultsPanel (rows)', () => {
+  it('adds an Input column, truncates long values and expands a row to the full values', () => {
+    const long = JSON.stringify({ nums: Array.from({ length: 30 }, (_, i) => i), target: 7 });
+    render(
+      <ResultsPanel
+        inputs={[long]}
+        view={{
+          kind: 'run',
+          status: 'done',
+          passed: 0,
+          total: 1,
+          results: [{ testCaseIndex: 0, passed: false, actual: '[1,2]', expected: '[0,1]' }],
+        }}
+      />
+    );
+    expect(screen.getByRole('columnheader', { name: 'Input' })).toBeTruthy();
+    const cell = screen.getAllByRole('cell')[2];
+    expect(cell.textContent!.endsWith('…')).toBe(true);
+    expect(cell.textContent!.length).toBeLessThan(long.length);
+
+    const toggle = screen.getByRole('button', { name: 'Test 1 details' });
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(cell); // the whole row is clickable
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    const details = document.getElementById('test-0-details')!;
+    expect(details.textContent).toContain('"target": 7'); // full, pretty-printed input
+    expect(details.textContent).toContain('29');
+    fireEvent.click(toggle); // and the button toggles it back (keyboard: Enter/Space on it)
+    expect(document.getElementById('test-0-details')).toBeNull();
+  });
+});
+
+describe('Splitter', () => {
+  it('moves with the arrow keys within its limits', () => {
+    let value = 0.4;
+    const ref = { current: document.body };
+    const { rerender } = render(
+      <Splitter
+        label="Resize"
+        orientation="vertical"
+        container={ref}
+        value={value}
+        min={0.2}
+        max={0.8}
+        onChange={(v) => (value = v)}
+      />
+    );
+    const sep = screen.getByRole('separator', { name: 'Resize' });
+    expect(sep.tabIndex).toBe(0);
+    expect(sep.getAttribute('aria-valuenow')).toBe('40');
+    fireEvent.keyDown(sep, { key: 'ArrowRight' });
+    expect(value).toBeCloseTo(0.45);
+    fireEvent.keyDown(sep, { key: 'End' });
+    expect(value).toBe(0.8);
+    rerender(
+      <Splitter
+        label="Resize"
+        orientation="vertical"
+        container={ref}
+        value={value}
+        min={0.2}
+        max={0.8}
+        onChange={(v) => (value = v)}
+      />
+    );
+    expect(sep.getAttribute('aria-valuenow')).toBe('80');
+  });
+
+  it('remembers the problem page split in localStorage', async () => {
+    localStorage.removeItem('dsa.problem.split.left');
+    ui(<ProblemPage />, '/problem/two-sum');
+    const sep = await screen.findByRole('separator', { name: 'Resize description and editor' });
+    fireEvent.keyDown(sep, { key: 'ArrowLeft' });
+    expect(localStorage.getItem('dsa.problem.split.left')).toBe('0.35');
   });
 });

@@ -37,3 +37,23 @@ describe('Markdown', () => {
     expect(html('`a * b * c` and `**x**`')).toContain('<code>a * b * c</code>');
   });
 });
+
+describe('formatJson', () => {
+  it('keeps short arrays and objects on one line and breaks long ones', async () => {
+    const { formatJson } = await import('./components/Examples');
+    expect(formatJson({ nums: [2, 7, 11, 15], target: 9 })).toBe(
+      '{"nums": [2, 7, 11, 15], "target": 9}'
+    );
+    const long = formatJson({ grid: Array.from({ length: 4 }, () => ['1', '1', '0', '0', '1']) });
+    expect(long.split('\n')).toEqual([
+      '{',
+      '  "grid": [',
+      '    ["1", "1", "0", "0", "1"],',
+      '    ["1", "1", "0", "0", "1"],',
+      '    ["1", "1", "0", "0", "1"],',
+      '    ["1", "1", "0", "0", "1"]',
+      '  ]',
+      '}',
+    ]);
+  });
+});

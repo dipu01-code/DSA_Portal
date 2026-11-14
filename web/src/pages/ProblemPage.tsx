@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useStore } from 'zustand';
 import {
   describeQueued,
@@ -10,10 +10,14 @@ import {
 } from '@dsa-portal/ui-core';
 import { themeMode } from '../theme';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { ResultsPanel, type ResultsView } from '../components/ResultsPanel';
+import { ConsolePanel, ResultsPanel, type ResultsView } from '../components/ResultsPanel';
 import { InlineMarkdown, Markdown } from '../components/Markdown';
 import { Icon } from '../components/Icon';
+import { Examples } from '../components/Examples';
+import { Tabs } from '../components/Tabs';
+import { Splitter, useStoredSize } from '../components/Splitter';
 import { isAccepted, useSolved } from '../use-solved';
+import { useProblemList } from '../use-problem-list';
 import { desktop } from '../platform';
 import { runInWorker } from '../run-in-worker';
 
@@ -22,6 +26,9 @@ const CodeEditor = lazy(() =>
   import('../components/CodeEditor').then((m) => ({ default: m.CodeEditor }))
 );
 
+const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform);
+export const RUN_SHORTCUT = IS_MAC ? '⌘+Enter' : 'Ctrl+Enter';
+
 export function ProblemPage() {
   const { id = '' } = useParams();
   const p = useProblem();
@@ -29,10 +36,18 @@ export function ProblemPage() {
   const { editorFontSize } = useSettings();
   const [run, setRun] = useState<ResultsView | null>(null);
   const [showResults, setShowResults] = useState<'run' | 'submit' | null>(null);
+  const [tab, setTab] = useState<'results' | 'console'>('results');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const dark = useStore(themeMode).mode === 'dark';
   const { queue } = useSync();
   const queued = sub.queuedKey ? queue.find((q) => q.key === sub.queuedKey) : undefined;
+  const list = useProblemList();
+
+  // Pane sizes: description vs right side, and editor vs results; remembered for next time.
+  const layoutRef = useRef<HTMLDivElement>(null);
+  const rightRef = useRef<HTMLElement>(null);
+  const [left, setLeft, leftMin, leftMax] = useStoredSize('dsa.problem.split.left', 0.4);
+  const [top, setTop, topMin, topMax] = useStoredSize('dsa.problem.split.top', 0.6);
 
   useEffect(() => {
     if (p.problem?.id !== id) void p.load(id);
@@ -48,6 +63,17 @@ export function ProblemPage() {
   const solved = acceptedNow || solvedOnServer;
   // A fresh solve unlocks it even if an earlier reveal was refused.
   const solutionLocked = !p.solution && !solved && (solved === false || p.solutionLocked);
+
+  // After the last hint is revealed its button goes away: move focus to that hint, not to <body>.
+  const hintsRef = useRef<HTMLOListElement>(null);
+  const shownHints = useRef(p.hints.length);
+  useEffect(() => {
+    const total = p.problem?.hints.length ?? 0;
+    if (p.hints.length > shownHints.current && p.hints.length >= total) {
+      hintsRef.current?.querySelector<HTMLElement>('li:last-child')?.focus();
+    }
+    shownHints.current = p.hints.length;
+  }, [p.hints.length, p.problem]);
 
   const latest = useRef({ p, sub });
   latest.current = { p, sub };
@@ -138,46 +164,87 @@ export function ProblemPage() {
                   expected: r.expected ?? '',
                 })),
               };
+  const view = showResults === 'submit' ? submitView : showResults === 'run' ? run : null;
   const totalHints = problem.hints.length;
+  const at = list?.findIndex((s) => s.id === problem.id) ?? -1;
+  const prev = at > 0 ? list![at - 1] : undefined;
+  const next = at >= 0 && at < list!.length - 1 ? list![at + 1] : undefined;
+  const judging = sub.status === 'submitting' || sub.status === 'judging';
 
   return (
-    <div className="problem-layout">
+    <div
+      className="problem-layout"
+      ref={layoutRef}
+      style={{ '--left': `${left * 100}%`, '--top': `${top * 100}%` } as React.CSSProperties}
+    >
       <article className="card problem-text" aria-labelledby="problem-title">
-        <h1 id="problem-title">{problem.title}</h1>
-        <p>
-          <span className={`badge ${problem.difficulty.toLowerCase()}`}>{problem.difficulty}</span>{' '}
-          <span className="badge">{problem.topic}</span>
-        </p>
+        <header className="problem-header">
+          <div className="title-row">
+            <h1 id="problem-title">{problem.title}</h1>
+            {solved && (
+              <span className="badge solved with-icon">
+                <Icon name="check" size={12} />
+                Solved
+              </span>
+            )}
+          </div>
+          <p className="meta">
+            <span className={`badge ${problem.difficulty.toLowerCase()}`}>
+              {problem.difficulty}
+            </span>
+            {/* The API gives each problem one topic (no tag list). */}
+            <span className="badge tag">{problem.topic}</span>
+          </p>
+          {list && (
+            <nav className="row pager" aria-label="Problems">
+              {prev ? (
+                <Link
+                  className="button-link with-icon"
+                  to={`/problem/${prev.id}`}
+                  title={prev.title}
+                >
+                  <Icon name="left" />
+                  Previous
+                </Link>
+              ) : (
+                <span />
+              )}
+              {next && (
+                <Link
+                  className="button-link with-icon"
+                  to={`/problem/${next.id}`}
+                  title={next.title}
+                >
+                  Next
+                  <Icon name="right" />
+                </Link>
+              )}
+            </nav>
+          )}
+        </header>
+
         <Markdown text={problem.description} className="description" />
+
         <h2>Examples</h2>
-        <ul className="examples">
-          {problem.testCases.slice(0, 2).map((t, i) => (
-            <li key={i}>
-              <code>input: {t.input}</code>
-              <br />
-              <code>output: {t.expected}</code>
-            </li>
-          ))}
-        </ul>
+        <Examples cases={problem.testCases.slice(0, 2)} />
+
         <h2>Hints</h2>
+        {totalHints === 0 && <p className="muted">This problem has no hints.</p>}
         {p.hints.length > 0 && (
-          <ol className="hints" aria-live="polite">
+          <ol className="hints" aria-live="polite" ref={hintsRef}>
             {p.hints.map((h, i) => (
-              <li key={i}>
+              <li key={i} tabIndex={-1}>
                 <InlineMarkdown text={h} />
               </li>
             ))}
           </ol>
         )}
-        <button
-          type="button"
-          onClick={() => void p.nextHint()}
-          disabled={p.hints.length >= totalHints}
-        >
-          {p.hints.length >= totalHints
-            ? 'No more hints'
-            : `Show hint ${p.hints.length + 1} of ${totalHints}`}
-        </button>
+        {p.hints.length < totalHints && (
+          <button type="button" onClick={() => void p.nextHint()}>
+            Show hint {p.hints.length + 1}
+          </button>
+        )}
+
         <h2>Solution</h2>
         {p.solution ? (
           <pre className="solution">
@@ -224,7 +291,17 @@ export function ProblemPage() {
         </ConfirmDialog>
       </article>
 
-      <section className="editor-pane" aria-label="Your solution">
+      <Splitter
+        label="Resize description and editor"
+        orientation="vertical"
+        container={layoutRef}
+        value={left}
+        min={leftMin}
+        max={leftMax}
+        onChange={setLeft}
+      />
+
+      <section className="editor-pane" aria-label="Your solution" ref={rightRef}>
         <div className="editor">
           <Suspense fallback={<p role="status">Loading editor…</p>}>
             <CodeEditor
@@ -237,59 +314,77 @@ export function ProblemPage() {
           </Suspense>
         </div>
         <div className="row">
-          <button type="button" onClick={() => void doRun()} title="Ctrl/Cmd+Enter">
-            Run tests
-          </button>
           <button
             type="button"
-            className="primary"
-            onClick={doSubmit}
-            disabled={sub.status === 'submitting' || sub.status === 'judging'}
+            onClick={() => void doRun()}
+            title={`Run tests (${RUN_SHORTCUT})`}
+            aria-keyshortcuts="Control+Enter Meta+Enter"
           >
-            {sub.status === 'submitting' || sub.status === 'judging' ? 'Judging…' : 'Submit'}
+            Run tests
+          </button>
+          <button type="button" className="primary" onClick={doSubmit} disabled={judging}>
+            {judging ? 'Judging…' : 'Submit'}
           </button>
           <button type="button" onClick={() => p.setCode(problem.starterCode)}>
             Reset code
           </button>
         </div>
+        <Splitter
+          label="Resize editor and results"
+          orientation="horizontal"
+          container={rightRef}
+          value={top}
+          min={topMin}
+          max={topMax}
+          onChange={setTop}
+        />
         <div className="card results-card">
-          <h2>Results</h2>
-          {(sub.status === 'submitting' || sub.status === 'judging') && (
-            <p className="muted">
-              {sub.live
-                ? 'Live: the result appears as soon as it is judged.'
-                : 'Checking for the result every second…'}
-            </p>
-          )}
-          {showResults === 'submit' && sub.status === 'queued' ? (
-            // Follows the outbox item: queued → syncing → the server's verdict.
-            <p
-              role="status"
-              className={
-                queued?.state === 'synced'
-                  ? 'success'
-                  : queued?.state === 'conflict' || queued?.state === 'rejected'
-                    ? 'error'
-                    : undefined
-              }
-            >
-              {!queued || queued.state === 'pending'
-                ? 'You are offline. Your submission is queued on this device and will be judged when you reconnect. Watch the sync status at the top.'
-                : `${describeQueued(queued)}${queued.message ? `. ${queued.message}` : ''}`}
-            </p>
-          ) : (
-            <ResultsPanel
-              view={showResults === 'submit' ? submitView : showResults === 'run' ? run : null}
-            />
-          )}
-          {showResults === 'submit' &&
-            sub.status === 'done' &&
-            sub.current?.userId === 'offline' && (
+          <Tabs<'results' | 'console'>
+            label="Output"
+            tabs={[
+              { id: 'results', label: 'Results' },
+              { id: 'console', label: 'Console' },
+            ]}
+            selected={tab}
+            onSelect={setTab}
+          >
+            {judging && (
               <p className="muted">
-                Judged on this computer. It syncs to your account when you reconnect; the
-                server&apos;s result counts.
+                {sub.live
+                  ? 'Live: the result appears as soon as it is judged.'
+                  : 'Checking for the result every second…'}
               </p>
             )}
+            {tab === 'console' ? (
+              <ConsolePanel view={view} />
+            ) : showResults === 'submit' && sub.status === 'queued' ? (
+              // Follows the outbox item: queued → syncing → the server's verdict.
+              <p
+                role="status"
+                className={
+                  queued?.state === 'synced'
+                    ? 'success'
+                    : queued?.state === 'conflict' || queued?.state === 'rejected'
+                      ? 'error'
+                      : undefined
+                }
+              >
+                {!queued || queued.state === 'pending'
+                  ? 'You are offline. Your submission is queued on this device and will be judged when you reconnect. Watch the sync status at the top.'
+                  : `${describeQueued(queued)}${queued.message ? `. ${queued.message}` : ''}`}
+              </p>
+            ) : (
+              <ResultsPanel view={view} inputs={problem.testCases.map((t) => t.input)} />
+            )}
+            {showResults === 'submit' &&
+              sub.status === 'done' &&
+              sub.current?.userId === 'offline' && (
+                <p className="muted">
+                  Judged on this computer. It syncs to your account when you reconnect; the
+                  server&apos;s result counts.
+                </p>
+              )}
+          </Tabs>
         </div>
       </section>
     </div>
