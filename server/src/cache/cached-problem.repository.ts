@@ -16,11 +16,18 @@ export class CachedProblemRepository implements ProblemRepository {
   ) {}
 
   findById(id: string) {
-    return this.cache.getOrLoad(this.cache.key('problem', id), PROBLEM_TTL_S, () => this.inner.findById(id));
+    return this.cache.getOrLoad(this.cache.key('problem', id), PROBLEM_TTL_S, () =>
+      this.inner.findById(id)
+    );
   }
 
   async findAll(filters: { topic?: Topic; difficulty?: Difficulty } = {}) {
-    const key = await this.cache.genKey('problems', 'list', filters.topic ?? '*', filters.difficulty ?? '*');
+    const key = await this.cache.genKey(
+      'problems',
+      'list',
+      filters.topic ?? '*',
+      filters.difficulty ?? '*'
+    );
     return this.cache.getOrLoad(key, PROBLEM_LIST_TTL_S, () => this.inner.findAll(filters));
   }
 

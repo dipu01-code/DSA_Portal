@@ -52,7 +52,10 @@ export function computeStreak(firstSolves: Date[], now = new Date()): StreakStat
  * (the unique (user_id, problem_id) row is locked by ON CONFLICT DO UPDATE).
  * PostgresSubmissionRepository.save() calls it (CR-017).
  */
-export async function updateStatsOnSubmission(tx: PoolClient, submission: Submission): Promise<void> {
+export async function updateStatsOnSubmission(
+  tx: PoolClient,
+  submission: Submission
+): Promise<void> {
   if (submission.status !== 'judged') return;
   const perTest = submission.result?.perTest ?? [];
   const solved = perTest.length > 0 && perTest.every((t) => t.passed);

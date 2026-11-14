@@ -11,29 +11,46 @@ describe('auth API', () => {
   beforeAll(() => app.ready());
   afterAll(() => app.close());
 
-  const login = (email = alice.email, password = alice.password) => call('POST', '/auth/login', { payload: { email, password } });
-  const refresh = (cookie?: string) => call('POST', '/auth/refresh', { headers: cookie ? { cookie } : {} });
+  const login = (email = alice.email, password = alice.password) =>
+    call('POST', '/auth/login', { payload: { email, password } });
+  const refresh = (cookie?: string) =>
+    call('POST', '/auth/refresh', { headers: cookie ? { cookie } : {} });
 
   it('registers a user without leaking the password hash', async () => {
     const res = await call('POST', '/auth/register', { payload: alice });
     expect(res.statusCode).toBe(201);
-    expect(res.json()).toMatchObject({ username: 'alice', email: 'alice@example.com', role: 'user' });
+    expect(res.json()).toMatchObject({
+      username: 'alice',
+      email: 'alice@example.com',
+      role: 'user',
+    });
     expect(res.body).not.toMatch(/password/i);
   });
 
   it('rejects duplicates (409), invalid input and weak passwords (400)', async () => {
-    expect((await call('POST', '/auth/register', { payload: { ...alice, username: 'alice2' } })).statusCode).toBe(409);
-    expect((await call('POST', '/auth/register', { payload: { ...alice, email: 'x@y.io' } })).statusCode).toBe(409);
-    const bad = await call('POST', '/auth/register', { payload: { username: 'ab', email: 'nope', password: 'x' } });
+    expect(
+      (await call('POST', '/auth/register', { payload: { ...alice, username: 'alice2' } }))
+        .statusCode
+    ).toBe(409);
+    expect(
+      (await call('POST', '/auth/register', { payload: { ...alice, email: 'x@y.io' } })).statusCode
+    ).toBe(409);
+    const bad = await call('POST', '/auth/register', {
+      payload: { username: 'ab', email: 'nope', password: 'x' },
+    });
     expect(bad.json()).toMatchObject({ statusCode: 400, error: 'VALIDATION_ERROR' });
-    const weak = await call('POST', '/auth/register', { payload: { username: 'bob', email: 'bob@x.io', password: 'onlyletters' } });
+    const weak = await call('POST', '/auth/register', {
+      payload: { username: 'bob', email: 'bob@x.io', password: 'onlyletters' },
+    });
     expect(weak.json().message).toMatch(/letter and a digit/);
   });
 
   it('logs in (email is case-insensitive) and sets an HttpOnly refresh cookie', async () => {
     const res = await login('alice@EXAMPLE.com');
     expect(res.json()).toMatchObject({ expiresIn: 900 });
-    expect(String(res.headers['set-cookie'])).toMatch(/^refresh_token=[^;]+; Max-Age=604800; Path=\/api\/v1\/auth; HttpOnly; SameSite=Strict/);
+    expect(String(res.headers['set-cookie'])).toMatch(
+      /^refresh_token=[^;]+; Max-Age=604800; Path=\/api\/v1\/auth; HttpOnly; SameSite=Strict/
+    );
   });
 
   it('gives the same 401 for a wrong password and an unknown email', async () => {
@@ -44,7 +61,9 @@ describe('auth API', () => {
   });
 
   it('GET /auth/me needs a valid access token', async () => {
-    const me = await call('GET', '/auth/me', { headers: bearer((await login()).json().accessToken) });
+    const me = await call('GET', '/auth/me', {
+      headers: bearer((await login()).json().accessToken),
+    });
     expect(me.json()).toMatchObject({ username: 'alice' });
     expect((await call('GET', '/auth/me')).statusCode).toBe(401);
     expect((await call('GET', '/auth/me', { headers: bearer('junk') })).statusCode).toBe(401);
@@ -56,7 +75,9 @@ describe('auth API', () => {
     expect(r1.statusCode).toBe(200);
     const second = cookieOf(r1);
     expect(second).not.toBe(first);
-    expect((await call('GET', '/auth/me', { headers: bearer(r1.json().accessToken) })).statusCode).toBe(200);
+    expect(
+      (await call('GET', '/auth/me', { headers: bearer(r1.json().accessToken) })).statusCode
+    ).toBe(200);
     expect((await refresh(second)).statusCode).toBe(200);
   });
 
@@ -73,13 +94,19 @@ describe('auth API', () => {
 
   it('only one of two concurrent refreshes with the same token wins', async () => {
     const cookie = cookieOf(await login());
-    const codes = (await Promise.all([refresh(cookie), refresh(cookie)])).map((r) => r.statusCode).sort();
+    const codes = (await Promise.all([refresh(cookie), refresh(cookie)]))
+      .map((r) => r.statusCode)
+      .sort();
     expect(codes).toEqual([200, 401]);
   });
 
   it('logout revokes the session and clears the cookie', async () => {
     const cookie = cookieOf(await login());
-    const out = await app.inject({ method: 'POST', url: '/api/v1/auth/logout', headers: { cookie } });
+    const out = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/logout',
+      headers: { cookie },
+    });
     expect(out.statusCode).toBe(204);
     expect(String(out.headers['set-cookie'])).toMatch(/^refresh_token=; Max-Age=0/);
     expect((await refresh(cookie)).statusCode).toBe(401);
@@ -88,8 +115,12 @@ describe('auth API', () => {
   });
 
   it('throttles repeated failed logins with 429 + Retry-After, even for the right password', async () => {
-    await call('POST', '/auth/register', { payload: { username: 'carol', email: 'carol@x.io', password: 'carol-pass-77' } });
-    for (let i = 0; i < 3; i++) expect((await login('carol@x.io', 'bad-guess-1')).statusCode).toBe(401);
+    await call('POST', '/auth/register', {
+      payload: { username: 'carol', email: 'carol@x.io', password: 'carol-pass-77' },
+    });
+    for (let i = 0; i < 3; i++) {
+      expect((await login('carol@x.io', 'bad-guess-1')).statusCode).toBe(401);
+    }
     const blocked = await login('carol@x.io', 'carol-pass-77');
     expect(blocked.statusCode).toBe(429);
     expect(Number(blocked.headers['retry-after'])).toBeGreaterThan(0);
@@ -98,7 +129,9 @@ describe('auth API', () => {
 });
 
 it('the spec check itself rejects a wrong body', () => {
-  expect(() => assertMatchesSpec('post', '/api/v1/auth/login', 200, { accessToken: 1 })).toThrow(/refreshToken|string/);
+  expect(() => assertMatchesSpec('post', '/api/v1/auth/login', 200, { accessToken: 1 })).toThrow(
+    /refreshToken|string/
+  );
   expect(() => assertMatchesSpec('post', '/api/v1/auth/login', 401, { error: 'x' })).toThrow();
 });
 
@@ -149,8 +182,19 @@ describe('admin API', () => {
   beforeAll(async () => {
     await app.ready();
     const mk = async (username: string) => {
-      const reg = await call('POST', '/auth/register', { payload: { username, email: `${username}@x.io`, password: 'pass-word-12' } });
-      return { id: reg.json().id as string, headers: bearer((await call('POST', '/auth/login', { payload: { email: `${username}@x.io`, password: 'pass-word-12' } })).json().accessToken) };
+      const reg = await call('POST', '/auth/register', {
+        payload: { username, email: `${username}@x.io`, password: 'pass-word-12' },
+      });
+      return {
+        id: reg.json().id as string,
+        headers: bearer(
+          (
+            await call('POST', '/auth/login', {
+              payload: { email: `${username}@x.io`, password: 'pass-word-12' },
+            })
+          ).json().accessToken
+        ),
+      };
     };
     const a = await mk('admin1');
     auth.setRole(a.id, 'admin');
@@ -168,9 +212,18 @@ describe('admin API', () => {
   it('creates a problem with a slug id and rejects a duplicate', async () => {
     const res = await call('POST', '/admin/problems', { payload: newProblem, headers: admin });
     expect(res.statusCode).toBe(201);
-    expect(res.json()).toMatchObject({ id: 'sum-of-two', hints: ['Use +'], testCases: [{ input: '{"a":1,"b":2}', expected: '3' }] });
-    expect((await problems.findById('sum-of-two'))?.testCases[0]).toEqual({ input: { a: 1, b: 2 }, expected: 3 });
-    expect((await call('POST', '/admin/problems', { payload: newProblem, headers: admin })).statusCode).toBe(409);
+    expect(res.json()).toMatchObject({
+      id: 'sum-of-two',
+      hints: ['Use +'],
+      testCases: [{ input: '{"a":1,"b":2}', expected: '3' }],
+    });
+    expect((await problems.findById('sum-of-two'))?.testCases[0]).toEqual({
+      input: { a: 1, b: 2 },
+      expected: 3,
+    });
+    expect(
+      (await call('POST', '/admin/problems', { payload: newProblem, headers: admin })).statusCode
+    ).toBe(409);
   });
 
   it('validates with the core schema (bad topic, empty test cases, non-JSON test case, unknown field)', async () => {
@@ -186,9 +239,24 @@ describe('admin API', () => {
   });
 
   it('updates fields, keeps the id, 404s on unknown ids', async () => {
-    const res = await call('PUT', '/admin/problems', { payload: { id: 'sum-of-two', title: 'Add Two', hints: ['a', 'b'] }, headers: admin });
-    expect(res.json()).toMatchObject({ id: 'sum-of-two', title: 'Add Two', hints: ['a', 'b'], difficulty: 'Easy' });
-    expect((await call('PUT', '/admin/problems', { payload: { id: 'nope', title: 'x' }, headers: admin })).statusCode).toBe(404);
+    const res = await call('PUT', '/admin/problems', {
+      payload: { id: 'sum-of-two', title: 'Add Two', hints: ['a', 'b'] },
+      headers: admin,
+    });
+    expect(res.json()).toMatchObject({
+      id: 'sum-of-two',
+      title: 'Add Two',
+      hints: ['a', 'b'],
+      difficulty: 'Easy',
+    });
+    expect(
+      (
+        await call('PUT', '/admin/problems', {
+          payload: { id: 'nope', title: 'x' },
+          headers: admin,
+        })
+      ).statusCode
+    ).toBe(404);
   });
 
   it('adds test cases', async () => {
@@ -198,12 +266,21 @@ describe('admin API', () => {
       headers: admin,
     });
     expect(res.json().testCases).toHaveLength(2);
-    expect((await problems.findById('sum-of-two'))?.testCases[1]).toEqual({ input: { a: -1, b: 1 }, expected: 0 });
+    expect((await problems.findById('sum-of-two'))?.testCases[1]).toEqual({
+      input: { a: -1, b: 1 },
+      expected: 0,
+    });
   });
 
   it('deletes (204) and 404s on unknown ids', async () => {
-    expect((await call('DELETE', '/admin/problems', { query: { id: 'sum-of-two' }, headers: admin })).statusCode).toBe(204);
+    expect(
+      (await call('DELETE', '/admin/problems', { query: { id: 'sum-of-two' }, headers: admin }))
+        .statusCode
+    ).toBe(204);
     expect(await problems.findById('sum-of-two')).toBeNull();
-    expect((await call('DELETE', '/admin/problems', { query: { id: 'nope' }, headers: admin })).statusCode).toBe(404);
+    expect(
+      (await call('DELETE', '/admin/problems', { query: { id: 'nope' }, headers: admin }))
+        .statusCode
+    ).toBe(404);
   });
 });

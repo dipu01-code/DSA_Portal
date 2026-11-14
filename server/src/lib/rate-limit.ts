@@ -16,7 +16,9 @@ export class RateLimiter {
     let w = this.windows.get(key);
     if (!w || w.resetAt <= now) {
       // Drop finished windows now and then, so a flood of distinct IPs cannot grow the map forever.
-      if (this.windows.size >= 10_000) for (const [k, v] of this.windows) if (v.resetAt <= now) this.windows.delete(k);
+      if (this.windows.size >= 10_000) {
+        for (const [k, v] of this.windows) if (v.resetAt <= now) this.windows.delete(k);
+      }
       w = { count: 0, resetAt: now + this.windowMs };
       this.windows.set(key, w);
     }

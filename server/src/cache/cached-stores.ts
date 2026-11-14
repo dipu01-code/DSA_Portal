@@ -11,7 +11,10 @@ export const DAILY_TTL_S = 300;
  * a 30 s TTL bounds the staleness. `bumpGeneration('leaderboard')` drops every cached board.
  */
 export class CachedLeaderboardStore implements LeaderboardStore {
-  constructor(private inner: LeaderboardStore, private cache: Cache) {}
+  constructor(
+    private inner: LeaderboardStore,
+    private cache: Cache
+  ) {}
 
   async rows(since: Date | null): Promise<LeaderboardRow[]> {
     const key = await this.cache.genKey('leaderboard', since ? 'week' : 'all');
@@ -23,9 +26,14 @@ export class CachedLeaderboardStore implements LeaderboardStore {
 
 /** Cache-aside around the daily challenge store: one entry per UTC date (the pick never changes that day). */
 export class CachedDailyChallengeStore implements DailyChallengeStore {
-  constructor(private inner: DailyChallengeStore, private cache: Cache) {}
+  constructor(
+    private inner: DailyChallengeStore,
+    private cache: Cache
+  ) {}
 
   async getOrCreate(date: string): Promise<string | null> {
-    return this.cache.getOrLoad(await this.cache.genKey('daily', date), DAILY_TTL_S, () => this.inner.getOrCreate(date));
+    return this.cache.getOrLoad(await this.cache.genKey('daily', date), DAILY_TTL_S, () =>
+      this.inner.getOrCreate(date)
+    );
   }
 }

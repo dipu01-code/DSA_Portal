@@ -21,6 +21,7 @@ const app = buildApp({
   daily: new PostgresDailyChallengeStore(),
   events: new PostgresEventSource(),
   audit: new PostgresAuditRepository(),
+  postgresRoutes: true,
 });
 app.addHook('onClose', closePool);
 

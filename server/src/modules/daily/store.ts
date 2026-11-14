@@ -31,8 +31,13 @@ export class PostgresDailyChallengeStore implements DailyChallengeStore {
   async getOrCreate(date: string) {
     const existing = await this.saved(date);
     if (existing) return existing;
-    const { rows } = await pool.query<{ slug: string }>(`SELECT slug FROM problems WHERE is_published ORDER BY slug`);
-    const slug = pickDaily(date, rows.map((r) => r.slug));
+    const { rows } = await pool.query<{ slug: string }>(
+      `SELECT slug FROM problems WHERE is_published ORDER BY slug`
+    );
+    const slug = pickDaily(
+      date,
+      rows.map((r) => r.slug)
+    );
     if (!slug) return null;
     await pool.query(
       `INSERT INTO daily_challenges (challenge_date, problem_id)
@@ -49,6 +54,9 @@ export class PostgresDailyChallengeStore implements DailyChallengeStore {
 export class InMemoryDailyChallengeStore implements DailyChallengeStore {
   constructor(private problems: ProblemRepository) {}
   async getOrCreate(date: string) {
-    return pickDaily(date, (await this.problems.findAll()).map((p) => p.id));
+    return pickDaily(
+      date,
+      (await this.problems.findAll()).map((p) => p.id)
+    );
   }
 }

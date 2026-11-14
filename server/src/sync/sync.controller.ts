@@ -2,12 +2,6 @@ import type { FastifyInstance, FastifyPluginAsync, FastifyRequest, FastifyReply 
 import { SyncService, SyncCursorExpiredError } from './sync.service';
 import type { SyncPushRequest, SyncPullRequest } from '@dsa-portal/core';
 
-interface AuthenticatedUser {
-  id: string;
-  username: string;
-  role: string;
-}
-
 export const syncRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
   const syncService = new SyncService();
 
@@ -15,26 +9,26 @@ export const syncRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
   const requireAuth = async (req: FastifyRequest, reply: FastifyReply) => {
     try {
       await req.jwtVerify();
-    } catch (err) {
-      reply.status(401).send({ error: 'Unauthorized', message: 'JWT token required' });
+    } catch {
+      return reply.status(401).send({ error: 'Unauthorized', message: 'JWT token required' });
     }
   };
 
   /**
-   * POST /api/v1/sync/push
+   * POST /sync/push
    * Batched, idempotent ingestion of client mutation operations
    */
   app.post<{ Body: SyncPushRequest }>(
-    '/api/v1/sync/push',
-    { preHandler: [requireAuth] },
+    '/sync/push',
+    { onRequest: [requireAuth] },
     async (req, reply) => {
-      const user = req.user as AuthenticatedUser;
-      if (!user?.id) {
+      const userId = req.user?.sub; // access token payload is { sub }
+      if (!userId) {
         return reply.status(401).send({ error: 'Unauthorized' });
       }
 
       try {
-        const response = await syncService.push(user.id, req.body);
+        const response = await syncService.push(userId, req.body);
         return reply.status(200).send(response);
       } catch (err: any) {
         req.log.error(err, 'Failed to process sync push batch');
@@ -47,20 +41,20 @@ export const syncRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
   );
 
   /**
-   * GET /api/v1/sync/pull
+   * GET /sync/pull
    * Incremental pull using monotonically increasing server_seq cursor
    */
   app.get<{ Querystring: SyncPullRequest }>(
-    '/api/v1/sync/pull',
-    { preHandler: [requireAuth] },
+    '/sync/pull',
+    { onRequest: [requireAuth] },
     async (req, reply) => {
-      const user = req.user as AuthenticatedUser;
-      if (!user?.id) {
+      const userId = req.user?.sub; // access token payload is { sub }
+      if (!userId) {
         return reply.status(401).send({ error: 'Unauthorized' });
       }
 
       try {
-        const response = await syncService.pull(user.id, req.query);
+        const response = await syncService.pull(userId, req.query);
         return reply.status(200).send(response);
       } catch (err: any) {
         if (err instanceof SyncCursorExpiredError || err.code === 'SYNC_CURSOR_EXPIRED') {
@@ -79,28 +73,24 @@ export const syncRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
   );
 
   /**
-   * GET /api/v1/sync/bootstrap
+   * GET /sync/bootstrap
    * Full snapshot recovery
    */
-  app.get(
-    '/api/v1/sync/bootstrap',
-    { preHandler: [requireAuth] },
-    async (req, reply) => {
-      const user = req.user as AuthenticatedUser;
-      if (!user?.id) {
-        return reply.status(401).send({ error: 'Unauthorized' });
-      }
-
-      try {
-        const response = await syncService.bootstrap(user.id);
-        return reply.status(200).send(response);
-      } catch (err: any) {
-        req.log.error(err, 'Failed to generate sync bootstrap snapshot');
-        return reply.status(500).send({
-          error: 'INTERNAL_ERROR',
-          message: err?.message || 'Sync bootstrap failed',
-        });
-      }
+  app.get('/sync/bootstrap', { onRequest: [requireAuth] }, async (req, reply) => {
+    const userId = req.user?.sub; // access token payload is { sub }
+    if (!userId) {
+      return reply.status(401).send({ error: 'Unauthorized' });
     }
-  );
+
+    try {
+      const response = await syncService.bootstrap(userId);
+      return reply.status(200).send(response);
+    } catch (err: any) {
+      req.log.error(err, 'Failed to generate sync bootstrap snapshot');
+      return reply.status(500).send({
+        error: 'INTERNAL_ERROR',
+        message: err?.message || 'Sync bootstrap failed',
+      });
+    }
+  });
 };

@@ -22,7 +22,9 @@ export const statsRoutes: FastifyPluginAsync<{ stats: StatsStore }> = async (app
     };
   });
 
-  app.get('/stats/me/topics', auth, async (req) => ({ topics: await stats.getTopicStats(req.user.sub) }));
+  app.get('/stats/me/topics', auth, async (req) => ({
+    topics: await stats.getTopicStats(req.user.sub),
+  }));
 
   // CR-016: not in openapi.yaml yet. `days` (UTC, ascending) feeds the streak calendar.
   app.get('/stats/me/streak', auth, async (req) => {

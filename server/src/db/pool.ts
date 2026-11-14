@@ -63,9 +63,7 @@ export async function getClient(): Promise<PoolClient> {
 /**
  * Helper to run a callback inside a transaction block
  */
-export async function withTransaction<T>(
-  callback: (client: PoolClient) => Promise<T>
-): Promise<T> {
+export async function withTransaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
   const client = await getClient();
   try {
     await client.query('BEGIN');
@@ -102,4 +100,11 @@ export async function checkDbHealth(): Promise<{ ok: boolean; latencyMs: number;
  */
 export async function closePool(): Promise<void> {
   await pool.end();
+}
+
+export type PoolMetrics = ReturnType<typeof getPoolMetrics>;
+
+/** The shared pool, for services that take an injectable Pool (health checks). */
+export function getPool(): Pool {
+  return pool;
 }

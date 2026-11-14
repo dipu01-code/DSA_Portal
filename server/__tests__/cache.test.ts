@@ -5,7 +5,7 @@ import { InMemoryProblemRepository } from '../src/modules/problems/in-memory-pro
 import { buildApp } from '../src/app';
 import { CachedDailyChallengeStore, CachedLeaderboardStore } from '../src/cache/cached-stores';
 
-const counter = <T,>(value: T, ms = 0) => {
+const counter = <T>(value: T, ms = 0) => {
   const fn = jest.fn(async () => {
     if (ms) await new Promise((r) => setTimeout(r, ms));
     return value;
@@ -32,7 +32,10 @@ describe('Cache (cache-aside)', () => {
   });
 
   it('adds 0-10 % TTL jitter', async () => {
-    for (const [jitter, ttl] of [[0, 100_000], [1, 110_000]] as const) {
+    for (const [jitter, ttl] of [
+      [0, 100_000],
+      [1, 110_000],
+    ] as const) {
       const b = new MemoryBackend();
       await new Cache(b, { jitter: () => jitter }).getOrLoad('k', 100, counter(1));
       expect(b.ttlOf('k')).toBeGreaterThan(ttl - 1000);
@@ -43,7 +46,9 @@ describe('Cache (cache-aside)', () => {
   it('single flight: 50 concurrent misses in one process load once', async () => {
     const cache = new Cache(new MemoryBackend());
     const load = counter('v', 20);
-    const all = await Promise.all(Array.from({ length: 50 }, () => cache.getOrLoad('hot', 60, load)));
+    const all = await Promise.all(
+      Array.from({ length: 50 }, () => cache.getOrLoad('hot', 60, load))
+    );
     expect(new Set(all)).toEqual(new Set(['v']));
     expect(load).toHaveBeenCalledTimes(1);
   });
@@ -53,7 +58,9 @@ describe('Cache (cache-aside)', () => {
     const [p1, p2] = [new Cache(shared, { pollMs: 5 }), new Cache(shared, { pollMs: 5 })];
     const load1 = counter('from-1', 40);
     const load2 = counter('from-2', 40);
-    expect(await Promise.all([p1.getOrLoad('hot', 60, load1), p2.getOrLoad('hot', 60, load2)])).toEqual(['from-1', 'from-1']);
+    expect(
+      await Promise.all([p1.getOrLoad('hot', 60, load1), p2.getOrLoad('hot', 60, load2)])
+    ).toEqual(['from-1', 'from-1']);
     expect(load2).not.toHaveBeenCalled();
   });
 
@@ -61,12 +68,20 @@ describe('Cache (cache-aside)', () => {
     const shared = new MemoryBackend();
     await shared.setNx('dsa:v1:hot:lock', '1', 60_000); // a crashed leader's lock
     const load = counter('v');
-    expect(await new Cache(shared, { pollMs: 5, waitMs: 30 }).getOrLoad('dsa:v1:hot', 60, load)).toBe('v');
+    expect(
+      await new Cache(shared, { pollMs: 5, waitMs: 30 }).getOrLoad('dsa:v1:hot', 60, load)
+    ).toBe('v');
     expect(load).toHaveBeenCalledTimes(1);
   });
 
   it('Redis down: every call is served from the loader and errors are counted', async () => {
-    const down: CacheBackend = { get: () => Promise.reject(new Error('ECONNREFUSED')), set: () => Promise.reject(new Error('x')), setNx: () => Promise.reject(new Error('x')), del: () => Promise.reject(new Error('x')), incr: () => Promise.reject(new Error('x')) };
+    const down: CacheBackend = {
+      get: () => Promise.reject(new Error('ECONNREFUSED')),
+      set: () => Promise.reject(new Error('x')),
+      setNx: () => Promise.reject(new Error('x')),
+      del: () => Promise.reject(new Error('x')),
+      incr: () => Promise.reject(new Error('x')),
+    };
     const cache = new Cache(down);
     const load = counter(7);
     expect(await cache.getOrLoad('k', 60, load)).toBe(7);
@@ -122,10 +137,16 @@ describe('CachedProblemRepository', () => {
   });
 });
 
-describe('cached leaderboard + daily challenge stores (wrappers around Person 1\'s stores, CR-022)', () => {
-  const row = { userId: 'u1', username: 'ada', solved: 3, totalScore: 6, lastSolvedAt: new Date('2026-11-13T10:00:00Z') };
+describe("cached leaderboard + daily challenge stores (wrappers around Person 1's stores, CR-022)", () => {
+  const row = {
+    userId: 'u1',
+    username: 'ada',
+    solved: 3,
+    totalScore: 6,
+    lastSolvedAt: new Date('2026-11-13T10:00:00Z'),
+  };
 
-  it('serve Person 1\'s routes from the cache, keep Dates for ranking, and count hits', async () => {
+  it("serve Person 1's routes from the cache, keep Dates for ranking, and count hits", async () => {
     const cache = new Cache(new MemoryBackend());
     const rows = jest.fn(async () => [row]);
     const getOrCreate = jest.fn(async () => 'two-sum');
@@ -146,7 +167,12 @@ describe('cached leaderboard + daily challenge stores (wrappers around Person 1\
     expect(rows.mock.calls[1][0]).toBeInstanceOf(Date);
 
     const token = app.jwt.sign({ sub: 'u1' });
-    for (let i = 0; i < 2; i++) await app.inject({ url: '/api/v1/daily-challenge', headers: { authorization: `Bearer ${token}` } });
+    for (let i = 0; i < 2; i++) {
+      await app.inject({
+        url: '/api/v1/daily-challenge',
+        headers: { authorization: `Bearer ${token}` },
+      });
+    }
     expect(getOrCreate).toHaveBeenCalledTimes(1);
     expect(cache.renderMetrics()).toMatch(/dsa_cache_requests_total\{result="hit"\} [1-9]/);
     await app.close();
@@ -172,10 +198,16 @@ describe('cached leaderboard + daily challenge stores (wrappers around Person 1\
   afterAll(() => backend.quit());
 
   it('does cache-aside, locking and generations on Redis', async () => {
-    const [c1, c2] = [new Cache(backend, { prefix: ns, pollMs: 5 }), new Cache(backend, { prefix: ns, pollMs: 5 })];
+    const [c1, c2] = [
+      new Cache(backend, { prefix: ns, pollMs: 5 }),
+      new Cache(backend, { prefix: ns, pollMs: 5 }),
+    ];
     const load = counter({ n: 1 }, 30);
     const key = await c1.genKey('list', 'x');
-    expect(await Promise.all([c1.getOrLoad(key, 5, load), c2.getOrLoad(key, 5, load)])).toEqual([{ n: 1 }, { n: 1 }]);
+    expect(await Promise.all([c1.getOrLoad(key, 5, load), c2.getOrLoad(key, 5, load)])).toEqual([
+      { n: 1 },
+      { n: 1 },
+    ]);
     expect(load).toHaveBeenCalledTimes(1);
     await c1.bumpGeneration('list');
     expect(await c1.genKey('list', 'x')).not.toBe(key);

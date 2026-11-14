@@ -35,8 +35,7 @@ export async function seedDatabase(): Promise<{
 
   // 3. Seed Default Users
   console.log('[Seed] Seeding default users (admin, student)...');
-  const devPasswordHash =
-    '$2a$10$iBVruH6tb4eMv2wF.RPFT.XkkhjjPIQ/wpSU2mR.2VuHIDY8E1T2y'; // bcrypt hash for password123 (CR-012)
+  const devPasswordHash = '$2a$10$iBVruH6tb4eMv2wF.RPFT.XkkhjjPIQ/wpSU2mR.2VuHIDY8E1T2y'; // bcrypt hash for password123 (CR-012)
 
   await userRepo.save({
     id: '00000000-0000-0000-0000-000000000001',

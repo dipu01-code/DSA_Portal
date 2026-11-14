@@ -29,7 +29,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Reads the queue columns added by migration 003 (the worker side lives in /workers/src/pg-queue.ts). */
 export class PostgresSubmissionQueue implements SubmissionQueue {
   async waitingCount() {
-    const { rows } = await pool.query<{ n: number }>(`SELECT count(*)::int AS n FROM submissions WHERE status = 'queued'`);
+    const { rows } = await pool.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM submissions WHERE status = 'queued'`
+    );
     return rows[0].n;
   }
 

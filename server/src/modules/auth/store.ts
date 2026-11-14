@@ -46,7 +46,10 @@ export class DuplicateUserError extends Error {}
 /** For tests and running the API without a database. */
 export class InMemoryAuthStore implements AuthStore {
   private users = new Map<string, ApiUser & { passwordHash: string }>();
-  private sessions = new Map<string, { userId: string; familyId: string; expiresAt: Date; revoked: boolean }>();
+  private sessions = new Map<
+    string,
+    { userId: string; familyId: string; expiresAt: Date; revoked: boolean }
+  >();
 
   async createUser(u: { username: string; email: string; passwordHash: string }) {
     for (const x of this.users.values()) {
@@ -69,7 +72,12 @@ export class InMemoryAuthStore implements AuthStore {
     if (u) u.role = role;
   }
   async createSession(s: NewSession) {
-    this.sessions.set(s.tokenHash, { userId: s.userId, familyId: s.familyId ?? randomUUID(), expiresAt: s.expiresAt, revoked: false });
+    this.sessions.set(s.tokenHash, {
+      userId: s.userId,
+      familyId: s.familyId ?? randomUUID(),
+      expiresAt: s.expiresAt,
+      revoked: false,
+    });
   }
   async consumeSession(tokenHash: string): Promise<ConsumeResult> {
     const s = this.sessions.get(tokenHash);
@@ -112,7 +120,9 @@ export class PostgresAuthStore implements AuthStore {
     return res.rows[0] ?? null;
   }
   async findById(id: string) {
-    const res = await pool.query<ApiUser>(`SELECT ${USER_COLS} FROM users WHERE id = $1::uuid`, [id]);
+    const res = await pool.query<ApiUser>(`SELECT ${USER_COLS} FROM users WHERE id = $1::uuid`, [
+      id,
+    ]);
     return res.rows[0] ?? null;
   }
   async createSession(s: NewSession) {
@@ -137,7 +147,10 @@ export class PostgresAuthStore implements AuthStore {
       [tokenHash]
     );
     if (!reused.rows[0]) return { status: 'invalid' };
-    await pool.query('UPDATE sessions SET revoked_at = now() WHERE family_id = $1 AND revoked_at IS NULL', [reused.rows[0].familyId]);
+    await pool.query(
+      'UPDATE sessions SET revoked_at = now() WHERE family_id = $1 AND revoked_at IS NULL',
+      [reused.rows[0].familyId]
+    );
     return { status: 'reused', userId: reused.rows[0].userId };
   }
   async deleteSession(tokenHash: string) {

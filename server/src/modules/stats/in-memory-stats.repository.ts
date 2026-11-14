@@ -16,14 +16,21 @@ export class InMemoryStatsRepository implements StatsStore {
     const map = new Map<string, Date | null>();
     const judged = (await this.submissions.findByUser(userId))
       .filter((s) => s.status === 'judged')
-      .sort((a, b) => (a.judgedAt ?? a.createdAt).getTime() - (b.judgedAt ?? b.createdAt).getTime());
+      .sort(
+        (a, b) => (a.judgedAt ?? a.createdAt).getTime() - (b.judgedAt ?? b.createdAt).getTime()
+      );
     for (const s of judged) {
-      if (!map.get(s.problemId)) map.set(s.problemId, s.result?.status === 'passed' ? (s.judgedAt ?? s.createdAt) : null);
+      if (!map.get(s.problemId)) {
+        map.set(s.problemId, s.result?.status === 'passed' ? (s.judgedAt ?? s.createdAt) : null);
+      }
     }
     return map;
   }
 
-  private async groupBy<K extends string>(userId: string, keyOf: (p: { topic: Topic; difficulty: Difficulty }) => K) {
+  private async groupBy<K extends string>(
+    userId: string,
+    keyOf: (p: { topic: Topic; difficulty: Difficulty }) => K
+  ) {
     const per = await this.perProblem(userId);
     const byId = new Map((await this.problems.findAll()).map((p) => [p.id, p]));
     const groups = new Map<K, { attempted: number; solved: number }>();
@@ -53,7 +60,10 @@ export class InMemoryStatsRepository implements StatsStore {
   }
 
   async getDifficultyStats(userId: string): Promise<DifficultyStat[]> {
-    return (await this.groupBy(userId, (p) => p.difficulty)).map(([difficulty, g]) => ({ difficulty, ...g }));
+    return (await this.groupBy(userId, (p) => p.difficulty)).map(([difficulty, g]) => ({
+      difficulty,
+      ...g,
+    }));
   }
 
   async getFirstSolves(userId: string) {

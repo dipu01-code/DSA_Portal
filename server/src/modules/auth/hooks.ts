@@ -21,8 +21,11 @@ export async function authenticate(req: FastifyRequest) {
  * preHandler that requires a role, e.g. `{ onRequest: app.authenticate, preHandler: authorize(store, 'admin') }`.
  * The role is read from the database, not the token, so a demotion takes effect at once.
  */
-export const authorize = (store: AuthStore, role: 'user' | 'admin') => async (req: FastifyRequest) => {
-  const user = await store.findById(req.user.sub);
-  if (!user) throw new HttpError(401, 'UNAUTHORIZED', 'User no longer exists');
-  if (role === 'admin' && user.role !== 'admin') throw new HttpError(403, 'FORBIDDEN', 'Admin role required');
-};
+export const authorize =
+  (store: AuthStore, role: 'user' | 'admin') => async (req: FastifyRequest) => {
+    const user = await store.findById(req.user.sub);
+    if (!user) throw new HttpError(401, 'UNAUTHORIZED', 'User no longer exists');
+    if (role === 'admin' && user.role !== 'admin') {
+      throw new HttpError(403, 'FORBIDDEN', 'Admin role required');
+    }
+  };

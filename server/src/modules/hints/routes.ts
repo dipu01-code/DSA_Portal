@@ -12,9 +12,7 @@ export const hintRoutes: FastifyPluginAsync<{ problems: ProblemRepository }> = a
 ) => {
   app.get('/problems/:id/hints', { onRequest: app.authenticate }, async (req) => {
     const { id } = IdParams.parse(req.params);
-    const { upto } = z
-      .object({ upto: z.coerce.number().int().min(0).optional() })
-      .parse(req.query);
+    const { upto } = z.object({ upto: z.coerce.number().int().min(0).optional() }).parse(req.query);
     const problem = await findProblemOr404(problems, id);
     const hints = hintService
       .getHintsUpTo(problem, upto ?? Number.MAX_SAFE_INTEGER)

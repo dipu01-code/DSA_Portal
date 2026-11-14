@@ -58,7 +58,9 @@ describe('Health & Metrics Infrastructure', () => {
       expect(exposition).toContain('dsa_sync_ops_total{status="applied"} 5');
       expect(exposition).toContain('dsa_sync_ops_total{status="conflict"} 2');
       expect(exposition).toContain('dsa_query_execution_count_total{query="leaderboard_query"} 1');
-      expect(exposition).toContain('dsa_query_max_duration_seconds{query="leaderboard_query"} 0.015000');
+      expect(exposition).toContain(
+        'dsa_query_max_duration_seconds{query="leaderboard_query"} 0.015000'
+      );
     });
   });
 });

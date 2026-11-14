@@ -22,7 +22,9 @@ const ProblemFields = z.object({
   solution: z.string(),
 });
 const CreateBody = ProblemFields.strict();
-const UpdateBody = ProblemFields.partial().extend({ id: z.string().min(1) }).strict();
+const UpdateBody = ProblemFields.partial()
+  .extend({ id: z.string().min(1) })
+  .strict();
 const AddTestCasesBody = z.object({ testCases: z.array(ApiTestCase).min(1) }).strict();
 
 function parseTestCases(list: Array<z.infer<typeof ApiTestCase>>): TestCase[] {
@@ -30,7 +32,11 @@ function parseTestCases(list: Array<z.infer<typeof ApiTestCase>>): TestCase[] {
     try {
       return { input: JSON.parse(t.input), expected: JSON.parse(t.expected) };
     } catch {
-      throw new HttpError(400, 'VALIDATION_ERROR', `testCases.${i}: input and expected must be JSON strings`);
+      throw new HttpError(
+        400,
+        'VALIDATION_ERROR',
+        `testCases.${i}: input and expected must be JSON strings`
+      );
     }
   });
 }
@@ -47,14 +53,21 @@ function toCoreFields(body: Partial<z.infer<typeof ProblemFields>>): Partial<Pro
 }
 
 export const slugify = (title: string) =>
-  title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
+  title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
 
 /**
  * Soft delete by slug or id. Still exported because server/src/index.ts (Person 1's) passes it as
  * `deleteProblem`; the admin route itself uses ProblemRepository.delete (CR-015), which does the same.
  */
 export async function unpublishProblem(id: string): Promise<boolean> {
-  const res = await pool.query('UPDATE problems SET is_published = false WHERE slug = $1 OR id::text = $1', [id]);
+  const res = await pool.query(
+    'UPDATE problems SET is_published = false WHERE slug = $1 OR id::text = $1',
+    [id]
+  );
   return (res.rowCount ?? 0) > 0;
 }
 
@@ -63,14 +76,19 @@ export interface AdminRouteOptions {
   problems: ProblemRepository;
 }
 
-export const adminRoutes: FastifyPluginAsync<AdminRouteOptions> = async (app, { auth, problems }) => {
+export const adminRoutes: FastifyPluginAsync<AdminRouteOptions> = async (
+  app,
+  { auth, problems }
+) => {
   const guard = { onRequest: app.authenticate, preHandler: authorize(auth, 'admin') };
 
   app.post('/admin/problems', guard, async (req, reply) => {
     const body = CreateBody.parse(req.body);
     const id = slugify(body.title);
     if (!id) throw new HttpError(400, 'VALIDATION_ERROR', 'title must contain letters or digits');
-    if (await problems.findById(id)) throw new HttpError(409, 'CONFLICT', `A problem with id "${id}" already exists`);
+    if (await problems.findById(id)) {
+      throw new HttpError(409, 'CONFLICT', `A problem with id "${id}" already exists`);
+    }
     const problem = validateProblem({ id, ...toCoreFields(body) });
     await problems.save(problem);
     return reply.code(201).send(toApiProblem(problem));
@@ -97,7 +115,10 @@ export const adminRoutes: FastifyPluginAsync<AdminRouteOptions> = async (app, { 
     const body = AddTestCasesBody.parse(req.body);
     const existing = await problems.findById(id);
     if (!existing) throw notFound('Problem');
-    const problem = validateProblem({ ...existing, testCases: [...existing.testCases, ...parseTestCases(body.testCases)] });
+    const problem = validateProblem({
+      ...existing,
+      testCases: [...existing.testCases, ...parseTestCases(body.testCases)],
+    });
     await problems.save(problem);
     return { testCases: toApiProblem(problem).testCases };
   });

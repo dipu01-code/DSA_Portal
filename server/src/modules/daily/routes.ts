@@ -4,10 +4,10 @@ import { notFound } from '../../lib/http';
 import { findProblemOr404, toApiProblem } from '../problems/routes';
 import { utcDate, type DailyChallengeStore } from './store';
 
-export const dailyRoutes: FastifyPluginAsync<{ daily: DailyChallengeStore; problems: ProblemRepository }> = async (
-  app,
-  { daily, problems }
-) => {
+export const dailyRoutes: FastifyPluginAsync<{
+  daily: DailyChallengeStore;
+  problems: ProblemRepository;
+}> = async (app, { daily, problems }) => {
   app.get('/daily-challenge', { onRequest: app.authenticate }, async () => {
     const date = utcDate();
     const problemId = await daily.getOrCreate(date);

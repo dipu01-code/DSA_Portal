@@ -35,7 +35,6 @@ export class HealthService {
   }
 
   async checkReadiness(): Promise<HealthCheckResult> {
-    const startTime = Date.now();
     let pgStatus: 'ok' | 'down' = 'ok';
     let pgError: string | undefined;
     let pgLatencyMs = 0;

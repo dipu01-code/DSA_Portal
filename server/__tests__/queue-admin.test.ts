@@ -5,16 +5,32 @@ import { InMemorySubmissionRepository } from '../src/modules/submissions/in-memo
 
 const ADMIN = randomUUID();
 const auth = {
-  findById: async (id: string) => ({ id, username: 'u', email: 'u@x.dev', role: id === ADMIN ? ('admin' as const) : ('user' as const), createdAt: new Date() }),
+  findById: async (id: string) => ({
+    id,
+    username: 'u',
+    email: 'u@x.dev',
+    role: id === ADMIN ? ('admin' as const) : ('user' as const),
+    createdAt: new Date(),
+  }),
 };
 
 describe('Day 6: backpressure and the dead-letter admin API', () => {
   const submissions = new InMemorySubmissionRepository();
-  const app = buildApp({ logger: false, submissions, auth: auth as unknown as AuthStore, backpressure: { maxWaiting: 2, retryAfterS: 7 } });
+  const app = buildApp({
+    logger: false,
+    submissions,
+    auth: auth as unknown as AuthStore,
+    backpressure: { maxWaiting: 2, retryAfterS: 7 },
+  });
   const bearer = (sub: string) => ({ authorization: `Bearer ${app.jwt.sign({ sub })}` });
   const user = randomUUID();
   const post = (headers: Record<string, string> = {}) =>
-    app.inject({ method: 'POST', url: '/api/v1/submissions', headers: { ...bearer(user), ...headers }, payload: { problemId: 'two-sum', code: 'x' } });
+    app.inject({
+      method: 'POST',
+      url: '/api/v1/submissions',
+      headers: { ...bearer(user), ...headers },
+      payload: { problemId: 'two-sum', code: 'x' },
+    });
 
   beforeAll(() => app.ready());
   afterAll(() => app.close());
@@ -35,13 +51,26 @@ describe('Day 6: backpressure and the dead-letter admin API', () => {
     first.judgedAt = new Date();
 
     expect((await app.inject({ url: '/api/v1/admin/queue/failed' })).statusCode).toBe(401);
-    expect((await app.inject({ url: '/api/v1/admin/queue/failed', headers: bearer(user) })).statusCode).toBe(403);
+    expect(
+      (await app.inject({ url: '/api/v1/admin/queue/failed', headers: bearer(user) })).statusCode
+    ).toBe(403);
 
-    const list = await app.inject({ url: '/api/v1/admin/queue/failed?limit=10', headers: bearer(ADMIN) });
+    const list = await app.inject({
+      url: '/api/v1/admin/queue/failed?limit=10',
+      headers: bearer(ADMIN),
+    });
     expect(list.statusCode).toBe(200);
-    expect(list.json()).toMatchObject({ data: [{ id: first.id, problemId: 'two-sum', userId: user }], nextCursor: null });
+    expect(list.json()).toMatchObject({
+      data: [{ id: first.id, problemId: 'two-sum', userId: user }],
+      nextCursor: null,
+    });
 
-    const requeue = (id: string) => app.inject({ method: 'POST', url: `/api/v1/admin/queue/failed/${id}/requeue`, headers: bearer(ADMIN) });
+    const requeue = (id: string) =>
+      app.inject({
+        method: 'POST',
+        url: `/api/v1/admin/queue/failed/${id}/requeue`,
+        headers: bearer(ADMIN),
+      });
     expect((await requeue(first.id)).json()).toEqual({ submissionId: first.id, status: 'queued' });
     expect(first.status).toBe('queued');
     expect((await requeue(first.id)).statusCode).toBe(404); // no longer in the dead-letter list
@@ -52,13 +81,23 @@ describe('Day 6: backpressure and the dead-letter admin API', () => {
       s.status = 'failed';
       s.judgedAt = new Date(Date.now() - Math.random() * 1000);
     }
-    const page1 = (await app.inject({ url: '/api/v1/admin/queue/failed?limit=1', headers: bearer(ADMIN) })).json();
+    const page1 = (
+      await app.inject({ url: '/api/v1/admin/queue/failed?limit=1', headers: bearer(ADMIN) })
+    ).json();
     expect(page1.data).toHaveLength(1);
-    const page2 = (await app.inject({ url: `/api/v1/admin/queue/failed?limit=1&cursor=${page1.nextCursor}`, headers: bearer(ADMIN) })).json();
+    const page2 = (
+      await app.inject({
+        url: `/api/v1/admin/queue/failed?limit=1&cursor=${page1.nextCursor}`,
+        headers: bearer(ADMIN),
+      })
+    ).json();
     expect(page2.data).toHaveLength(1);
     expect(page2.data[0].id).not.toBe(page1.data[0].id);
     expect(page2.nextCursor).toBeNull();
-    const bad = await app.inject({ url: '/api/v1/admin/queue/failed?cursor=bm9wZQ', headers: bearer(ADMIN) });
+    const bad = await app.inject({
+      url: '/api/v1/admin/queue/failed?cursor=bm9wZQ',
+      headers: bearer(ADMIN),
+    });
     expect(bad.statusCode).toBe(400);
   });
 });

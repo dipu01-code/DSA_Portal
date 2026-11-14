@@ -21,17 +21,24 @@ export class LoginThrottle {
 
   /** Seconds until the caller may try again, or 0 if allowed. */
   retryAfter(ip: string, email: string, now = Date.now()) {
-    const checks: Array<[string, number]> = [[`${ip}|${email}`, this.perAccount], [ip, this.perIp]];
+    const checks: Array<[string, number]> = [
+      [`${ip}|${email}`, this.perAccount],
+      [ip, this.perIp],
+    ];
     let wait = 0;
     for (const [key, limit] of checks) {
       const list = this.recent(key, now);
-      if (list.length >= limit) wait = Math.max(wait, Math.ceil((list[list.length - limit] + this.windowMs - now) / 1000));
+      if (list.length >= limit) {
+        wait = Math.max(wait, Math.ceil((list[list.length - limit] + this.windowMs - now) / 1000));
+      }
     }
     return wait;
   }
 
   fail(ip: string, email: string, now = Date.now()) {
-    for (const key of [`${ip}|${email}`, ip]) this.failures.set(key, [...this.recent(key, now), now]);
+    for (const key of [`${ip}|${email}`, ip]) {
+      this.failures.set(key, [...this.recent(key, now), now]);
+    }
   }
 
   /** A correct password clears the account counter (not the IP one). */

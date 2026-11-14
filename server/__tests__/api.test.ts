@@ -26,7 +26,12 @@ describe('REST API behaviour', () => {
   afterAll(() => app.close());
 
   const post = (code: string, problemId = 'two-sum', headers: Record<string, string> = auth) =>
-    app.inject({ method: 'POST', url: '/api/v1/submissions', headers, payload: { problemId, code } });
+    app.inject({
+      method: 'POST',
+      url: '/api/v1/submissions',
+      headers,
+      payload: { problemId, code },
+    });
   // POST then let the worker judge it, like the real worker process would.
   const submit = async (code: string, problemId = 'two-sum', headers = auth) => {
     const res = await post(code, problemId, headers);
@@ -36,12 +41,23 @@ describe('REST API behaviour', () => {
   const get = (url: string, headers = auth) => app.inject({ method: 'GET', url, headers });
 
   it('judges a correct and a wrong solution with per-test results', async () => {
-    const ok = (await get(`/api/v1/submissions/${(await submit(TWO_SUM_OK)).json().submissionId}`)).json();
+    const ok = (
+      await get(`/api/v1/submissions/${(await submit(TWO_SUM_OK)).json().submissionId}`)
+    ).json();
     expect(ok).toMatchObject({ status: 'judged', passed: 3, total: 3 });
-    expect(ok.results[0]).toEqual({ testCaseIndex: 0, passed: true, actual: '[0,1]', expected: '[0,1]' });
+    expect(ok.results[0]).toEqual({
+      testCaseIndex: 0,
+      passed: true,
+      actual: '[0,1]',
+      expected: '[0,1]',
+    });
     expect(ok.judgedAt).not.toBeNull();
 
-    const bad = (await get(`/api/v1/submissions/${(await submit('function solve() { return [9, 9]; }')).json().submissionId}`)).json();
+    const bad = (
+      await get(
+        `/api/v1/submissions/${(await submit('function solve() { return [9, 9]; }')).json().submissionId}`
+      )
+    ).json();
     expect(bad).toMatchObject({ status: 'judged', passed: 0, total: 3 });
   });
 
@@ -54,12 +70,18 @@ describe('REST API behaviour', () => {
 
     await judgeSubmission(res.json().submissionId, deps);
     await judgeSubmission(res.json().submissionId, deps); // duplicate delivery is a no-op
-    expect((await get(`/api/v1/submissions/${res.json().submissionId}`)).json()).toMatchObject({ status: 'judged', passed: 3 });
+    expect((await get(`/api/v1/submissions/${res.json().submissionId}`)).json()).toMatchObject({
+      status: 'judged',
+      passed: 3,
+    });
   });
 
   it('honours Idempotency-Key: same key returns the same submission, a different body is rejected', async () => {
     const uid = randomUUID();
-    const headers = { authorization: `Bearer ${app.jwt.sign({ sub: uid })}`, 'idempotency-key': `k-${randomUUID()}` };
+    const headers = {
+      authorization: `Bearer ${app.jwt.sign({ sub: uid })}`,
+      'idempotency-key': `k-${randomUUID()}`,
+    };
     const first = await post(TWO_SUM_OK, 'two-sum', headers);
     const retry = await post(TWO_SUM_OK, 'two-sum', headers);
     expect(retry.statusCode).toBe(202);
@@ -71,7 +93,10 @@ describe('REST API behaviour', () => {
     expect(other.json().error).toBe('IDEMPOTENCY_KEY_REUSED');
 
     // Keys are per user: someone else may reuse the same key.
-    const theirs = await post(TWO_SUM_OK, 'two-sum', { ...otherAuth, 'idempotency-key': headers['idempotency-key'] });
+    const theirs = await post(TWO_SUM_OK, 'two-sum', {
+      ...otherAuth,
+      'idempotency-key': headers['idempotency-key'],
+    });
     expect(theirs.json().submissionId).not.toBe(first.json().submissionId);
   });
 
@@ -86,7 +111,9 @@ describe('REST API behaviour', () => {
     const seen: string[] = [];
     let cursor: string | null = null;
     do {
-      const page = (await get(`/api/v1/problems?limit=1${cursor ? `&cursor=${cursor}` : ''}`)).json();
+      const page = (
+        await get(`/api/v1/problems?limit=1${cursor ? `&cursor=${cursor}` : ''}`)
+      ).json();
       seen.push(...page.data.map((p: { id: string }) => p.id));
       cursor = page.nextCursor;
     } while (cursor);
@@ -107,11 +134,15 @@ describe('REST API behaviour', () => {
 
   it('unlocks the solution only after the user solves the problem', async () => {
     const fresh = { authorization: `Bearer ${app.jwt.sign({ sub: randomUUID() })}` };
-    expect((await get('/api/v1/problems/palindrome-number/solution', fresh)).json().error).toBe('SOLUTION_LOCKED');
+    expect((await get('/api/v1/problems/palindrome-number/solution', fresh)).json().error).toBe(
+      'SOLUTION_LOCKED'
+    );
     await submit('function solve() { return []; }', 'two-sum', fresh);
     expect((await get('/api/v1/problems/two-sum/solution', fresh)).statusCode).toBe(403);
     await submit(TWO_SUM_OK, 'two-sum', fresh);
-    expect((await get('/api/v1/problems/two-sum/solution', fresh)).json().solution).toContain('function solve');
+    expect((await get('/api/v1/problems/two-sum/solution', fresh)).json().solution).toContain(
+      'function solve'
+    );
   });
 
   it("lists only the caller's own submissions and hides others' by id", async () => {
@@ -126,7 +157,11 @@ describe('REST API behaviour', () => {
     const res = await get('/api/v1/problems', { authorization: 'Bearer not-a-jwt' });
     expect(res.statusCode).toBe(401);
     const unknown = await get('/api/v1/nope');
-    expect(unknown.json()).toMatchObject({ error: 'NOT_FOUND', statusCode: 404, path: '/api/v1/nope' });
+    expect(unknown.json()).toMatchObject({
+      error: 'NOT_FOUND',
+      statusCode: 404,
+      path: '/api/v1/nope',
+    });
     expect(typeof unknown.json().timestamp).toBe('string');
 
     const badJson = await app.inject({
@@ -139,7 +174,13 @@ describe('REST API behaviour', () => {
   });
 
   it('echoes or generates x-request-id', async () => {
-    expect((await app.inject({ url: '/api/v1/topics', headers: { 'x-request-id': 'abc-123' } })).headers['x-request-id']).toBe('abc-123');
-    expect((await app.inject({ url: '/api/v1/topics' })).headers['x-request-id']).toMatch(/[0-9a-f-]{36}/);
+    expect(
+      (await app.inject({ url: '/api/v1/topics', headers: { 'x-request-id': 'abc-123' } })).headers[
+        'x-request-id'
+      ]
+    ).toBe('abc-123');
+    expect((await app.inject({ url: '/api/v1/topics' })).headers['x-request-id']).toMatch(
+      /[0-9a-f-]{36}/
+    );
   });
 });

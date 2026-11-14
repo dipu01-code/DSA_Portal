@@ -35,7 +35,11 @@ const DB_URL = process.env.TEST_DATABASE_URL;
   });
 
   const newUser = async (name: string) => {
-    const u = await store.createUser({ username: `${name}_${tag}`, email: `${name}_${tag}@x.io`, passwordHash: 'h' });
+    const u = await store.createUser({
+      username: `${name}_${tag}`,
+      email: `${name}_${tag}@x.io`,
+      passwordHash: 'h',
+    });
     userIds.push(u.id);
     return u;
   };
@@ -47,20 +51,35 @@ const DB_URL = process.env.TEST_DATABASE_URL;
     expect(u.createdAt).toBeInstanceOf(Date);
     expect((await store.findByEmail(`pg_${tag}@x.io`))?.passwordHash).toBe('h');
     expect(await store.findById(u.id)).toEqual(u);
-    await expect(store.createUser({ username: `pg_${tag}`, email: 'other@x.io', passwordHash: 'h' })).rejects.toBeInstanceOf(DuplicateUserError);
+    await expect(
+      store.createUser({ username: `pg_${tag}`, email: 'other@x.io', passwordHash: 'h' })
+    ).rejects.toBeInstanceOf(DuplicateUserError);
   });
 
   it('consumes a refresh token once, even concurrently; reuse revokes only its family (CR-014)', async () => {
     const u = await newUser('sess');
     const future = new Date(Date.now() + 60_000);
-    await store.createSession({ userId: u.id, tokenHash: `a-${tag}`, expiresAt: future, ip: '127.0.0.1' });
+    await store.createSession({
+      userId: u.id,
+      tokenHash: `a-${tag}`,
+      expiresAt: future,
+      ip: '127.0.0.1',
+    });
     await store.createSession({ userId: u.id, tokenHash: `other-${tag}`, expiresAt: future }); // another device
-    const results = await Promise.all([store.consumeSession(`a-${tag}`), store.consumeSession(`a-${tag}`)]);
+    const results = await Promise.all([
+      store.consumeSession(`a-${tag}`),
+      store.consumeSession(`a-${tag}`),
+    ]);
     expect(results.map((r) => r.status).sort()).toEqual(['ok', 'reused']);
     const ok = results.find((r) => r.status === 'ok') as { familyId: string };
 
     // The token issued after the rotation was in the same family, so the reuse revoked it too.
-    await store.createSession({ userId: u.id, tokenHash: `a2-${tag}`, expiresAt: future, familyId: ok.familyId });
+    await store.createSession({
+      userId: u.id,
+      tokenHash: `a2-${tag}`,
+      expiresAt: future,
+      familyId: ok.familyId,
+    });
     expect((await store.consumeSession(`a-${tag}`)).status).toBe('reused');
     expect(await store.consumeSession(`a2-${tag}`)).toEqual({ status: 'reused', userId: u.id });
     expect((await store.consumeSession(`other-${tag}`)).status).toBe('ok');
@@ -70,8 +89,17 @@ const DB_URL = process.env.TEST_DATABASE_URL;
   it('keeps stats counters right under concurrent submissions', async () => {
     const u = await newUser('stats');
     const sub = (passed: boolean): Submission => ({
-      id: randomUUID(), problemId: 'two-sum', userId: u.id, code: '', status: 'judged', createdAt: new Date(),
-      result: { problemId: 'two-sum', status: passed ? 'passed' : 'failed', perTest: [{ id: '0', passed, expected: 1, actual: 1, runtimeMs: 1 }] },
+      id: randomUUID(),
+      problemId: 'two-sum',
+      userId: u.id,
+      code: '',
+      status: 'judged',
+      createdAt: new Date(),
+      result: {
+        problemId: 'two-sum',
+        status: passed ? 'passed' : 'failed',
+        perTest: [{ id: '0', passed, expected: 1, actual: 1, runtimeMs: 1 }],
+      },
     });
     // 10 parallel transactions, as 10 workers judging at once.
     await Promise.all(
@@ -95,7 +123,9 @@ const DB_URL = process.env.TEST_DATABASE_URL;
     expect(row.rows[0]).toMatchObject({ attempts: 10, solved: true });
 
     expect(await stats.getFirstSolves(u.id)).toEqual([row.rows[0].first_solved_at]);
-    expect(await stats.getDifficultyStats(u.id)).toEqual([{ difficulty: 'Easy', attempted: 1, solved: 1 }]);
+    expect(await stats.getDifficultyStats(u.id)).toEqual([
+      { difficulty: 'Easy', attempted: 1, solved: 1 },
+    ]);
     expect(await stats.getTopicStats(u.id)).toEqual([{ topic: 'Arrays', attempted: 1, solved: 1 }]);
   });
 
@@ -106,7 +136,9 @@ const DB_URL = process.env.TEST_DATABASE_URL;
     );
     expect(await problems.delete(`p3-test-${tag}`)).toBe(true);
     expect(await problems.delete(`p3-test-${tag}`)).toBe(false); // already unpublished
-    const res = await pool.query('SELECT is_published FROM problems WHERE slug = $1', [`p3-test-${tag}`]);
+    const res = await pool.query('SELECT is_published FROM problems WHERE slug = $1', [
+      `p3-test-${tag}`,
+    ]);
     expect(res.rows[0].is_published).toBe(false);
     expect(await problems.delete(`missing-${tag}`)).toBe(false);
   });

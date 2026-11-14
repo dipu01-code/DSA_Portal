@@ -68,6 +68,11 @@ export interface AppOptions {
   corsOrigins?: string[];
   /** Audit trail for submissions (PostgresAuditRepository). Nothing is recorded without it. */
   audit?: AuditRepository;
+  /**
+   * Mount Person 2's PostgreSQL-only routes: /api/v1/sync/{push,pull,bootstrap}, /health(/live|/ready), /metrics.
+   * They use the shared pool directly, so they are loaded lazily and only when the server runs on PostgreSQL.
+   */
+  postgresRoutes?: boolean;
 }
 
 const envInt = (name: string, fallback: number) => Number(process.env[name]) || fallback;
@@ -101,19 +106,25 @@ export function buildApp(opts: AppOptions = {}) {
 
   const submissions = opts.submissions ?? new InMemorySubmissionRepository();
   if (!opts.queue && !(submissions instanceof InMemorySubmissionRepository)) {
-    throw new Error('Pass a queue (PostgresSubmissionQueue) together with a non-memory submission repository');
+    throw new Error(
+      'Pass a queue (PostgresSubmissionQueue) together with a non-memory submission repository'
+    );
   }
   const problems = opts.problems ?? new InMemoryProblemRepository();
   const auth = opts.auth ?? new InMemoryAuthStore();
   if (!opts.leaderboard && !(submissions instanceof InMemorySubmissionRepository)) {
-    throw new Error('Pass a leaderboard store (PostgresLeaderboardStore) together with a non-memory submission repository');
+    throw new Error(
+      'Pass a leaderboard store (PostgresLeaderboardStore) together with a non-memory submission repository'
+    );
   }
   const deps = {
     problems,
     submissions,
     queue: opts.queue ?? new InMemorySubmissionQueue(submissions as InMemorySubmissionRepository),
     auth,
-    leaderboard: opts.leaderboard ?? new InMemoryLeaderboardStore(submissions as InMemorySubmissionRepository, problems, auth),
+    leaderboard:
+      opts.leaderboard ??
+      new InMemoryLeaderboardStore(submissions as InMemorySubmissionRepository, problems, auth),
     daily: opts.daily ?? new InMemoryDailyChallengeStore(problems),
     stats: opts.stats ?? new InMemoryStatsRepository(problems, submissions),
     deleteProblem: opts.deleteProblem ?? (async () => false),
@@ -130,12 +141,20 @@ export function buildApp(opts: AppOptions = {}) {
     },
     audit: opts.audit,
   };
-  const limits = { perIp: envInt('RATE_LIMIT_IP_PER_MIN', 300), perUser: envInt('RATE_LIMIT_USER_PER_MIN', 120), ...opts.rateLimit };
+  const limits = {
+    perIp: envInt('RATE_LIMIT_IP_PER_MIN', 300),
+    perUser: envInt('RATE_LIMIT_USER_PER_MIN', 120),
+    ...opts.rateLimit,
+  };
   const ipLimiter = new RateLimiter(limits.perIp);
   const userLimiter = new RateLimiter(limits.perUser);
 
   // Unset: any origin in development, none in production (native mobile and the CLI send no Origin, so they still work).
-  const allowList = opts.corsOrigins ?? process.env.CORS_ORIGINS?.split(',').map((o) => o.trim()).filter(Boolean);
+  const allowList =
+    opts.corsOrigins ??
+    process.env.CORS_ORIGINS?.split(',')
+      .map((o) => o.trim())
+      .filter(Boolean);
   const corsOrigin = allowList?.length ? allowList : process.env.NODE_ENV !== 'production';
 
   app.register(fastifyCors, { origin: corsOrigin });
@@ -146,7 +165,9 @@ export function buildApp(opts: AppOptions = {}) {
   app.addHook('onSend', async (req, reply) => {
     reply.header('x-request-id', req.id);
     // A route may set its own CSP (the /docs page needs the Redoc script); everything else gets the strict one.
-    for (const [k, v] of Object.entries(SECURITY_HEADERS)) if (!reply.hasHeader(k)) reply.header(k, v);
+    for (const [k, v] of Object.entries(SECURITY_HEADERS)) {
+      if (!reply.hasHeader(k)) reply.header(k, v);
+    }
   });
 
   app.setErrorHandler((err: FastifyError, req, reply) => {
@@ -185,9 +206,17 @@ export function buildApp(opts: AppOptions = {}) {
     });
   });
 
-  const tooMany = (reply: { header: (k: string, v: string) => unknown }, retryAfterS: number, who: string) => {
+  const tooMany = (
+    reply: { header: (k: string, v: string) => unknown },
+    retryAfterS: number,
+    who: string
+  ) => {
     reply.header('retry-after', String(retryAfterS));
-    return new HttpError(429, 'RATE_LIMITED', `Too many requests from this ${who}; retry in ${retryAfterS}s`);
+    return new HttpError(
+      429,
+      'RATE_LIMITED',
+      `Too many requests from this ${who}; retry in ${retryAfterS}s`
+    );
   };
 
   app.register(
@@ -214,10 +243,22 @@ export function buildApp(opts: AppOptions = {}) {
       await api.register(statsRoutes, deps);
       await api.register(leaderboardRoutes, deps);
       await api.register(dailyRoutes, deps);
+      if (opts.postgresRoutes) await api.register((await import('./sync')).syncRoutes);
     },
     { prefix: '/api/v1' }
   );
 
+  if (opts.postgresRoutes) {
+    // Container probes and Prometheus scrape the root paths (infra/docker, infra/monitoring).
+    app.register(async (root) => {
+      await root.register((await import('./health/health.controller')).healthRoutes, {
+        prefix: '/health',
+      });
+      await root.register((await import('./metrics/metrics.controller')).metricsRoutes, {
+        prefix: '/metrics',
+      });
+    });
+  }
   serveApiDocs(app);
   if (opts.events) attachRealtime(app, opts.events, corsOrigin);
   return app;
@@ -231,7 +272,9 @@ const REDOC = 'https://cdn.redoc.ly/redoc/v2.1.5/bundles/redoc.standalone.js'; /
 function serveApiDocs(app: FastifyInstance) {
   if (!existsSync(SPEC_PATH)) return;
   const spec = readFileSync(SPEC_PATH, 'utf8');
-  app.get('/docs/openapi.yaml', async (_req, reply) => reply.type('application/yaml; charset=utf-8').send(spec));
+  app.get('/docs/openapi.yaml', async (_req, reply) =>
+    reply.type('application/yaml; charset=utf-8').send(spec)
+  );
   app.get('/docs', async (_req, reply) =>
     reply
       .type('text/html; charset=utf-8')

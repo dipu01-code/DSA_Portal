@@ -52,7 +52,9 @@ export class InMemoryLeaderboardStore implements LeaderboardStore {
     const firstSolve = new Map<string, Date>(); // "user|problem" → first solve
     for (const s of this.submissions.all()) {
       const tests = s.result?.perTest ?? [];
-      if (s.status !== 'judged' || !s.judgedAt || !tests.length || !tests.every((t) => t.passed)) continue;
+      if (s.status !== 'judged' || !s.judgedAt || !tests.length || !tests.every((t) => t.passed)) {
+        continue;
+      }
       const key = `${s.userId}|${s.problemId}`;
       const prev = firstSolve.get(key);
       if (!prev || s.judgedAt < prev) firstSolve.set(key, s.judgedAt);

@@ -46,9 +46,7 @@ export class SyncService {
 
       // 1. Upsert device registration and last_seen_hlc
       const latestOpHlc =
-        body.operations.length > 0
-          ? body.operations[body.operations.length - 1].hlc
-          : undefined;
+        body.operations.length > 0 ? body.operations[body.operations.length - 1].hlc : undefined;
 
       await client.query(
         `INSERT INTO sync_devices (user_id, device_id, client_version, last_seen_hlc, updated_at)
@@ -78,20 +76,17 @@ export class SyncService {
           RETURNING server_seq, op_id;
         `;
 
-        const logRes = await client.query<{ server_seq: string; op_id: string }>(
-          insertLogSql,
-          [
-            op.opId,
-            body.deviceId,
-            userId,
-            op.entity,
-            op.operationType,
-            JSON.stringify(op.payload),
-            clientTime.toISOString(),
-            op.hlc,
-            op.schemaVersion || 1,
-          ]
-        );
+        const logRes = await client.query<{ server_seq: string; op_id: string }>(insertLogSql, [
+          op.opId,
+          body.deviceId,
+          userId,
+          op.entity,
+          op.operationType,
+          JSON.stringify(op.payload),
+          clientTime.toISOString(),
+          op.hlc,
+          op.schemaVersion || 1,
+        ]);
 
         if (logRes.rows.length === 0) {
           // Idempotency hit: Operation already logged and processed
@@ -184,8 +179,7 @@ export class SyncService {
           : String(r.client_timestamp),
       hlc: r.hybrid_logical_clock,
       schemaVersion: r.schema_version,
-      createdAt:
-        r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at),
+      createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at),
     }));
 
     const nextCursor =
@@ -205,11 +199,21 @@ export class SyncService {
     const client = this.client || pool;
 
     const [probRes, subRes, statsRes, setRes, seqRes] = await Promise.all([
-      client.query('SELECT id, slug, title, topic, difficulty, description, starter_code FROM problems WHERE is_published = true'),
-      client.query('SELECT * FROM submissions WHERE user_id = $1::uuid ORDER BY created_at DESC LIMIT 200', [userId]),
+      client.query(
+        'SELECT id, slug, title, topic, difficulty, description, starter_code FROM problems WHERE is_published = true'
+      ),
+      client.query(
+        'SELECT * FROM submissions WHERE user_id = $1::uuid ORDER BY created_at DESC LIMIT 200',
+        [userId]
+      ),
       client.query('SELECT * FROM user_problem_stats WHERE user_id = $1::uuid', [userId]),
-      client.query('SELECT settings, version_hlc FROM user_settings WHERE user_id = $1::uuid LIMIT 1', [userId]),
-      client.query<{ watermark: string }>('SELECT COALESCE(MAX(server_seq), 0) AS watermark FROM sync_op_log'),
+      client.query(
+        'SELECT settings, version_hlc FROM user_settings WHERE user_id = $1::uuid LIMIT 1',
+        [userId]
+      ),
+      client.query<{ watermark: string }>(
+        'SELECT COALESCE(MAX(server_seq), 0) AS watermark FROM sync_op_log'
+      ),
     ]);
 
     const watermarkSeq = Number(seqRes.rows[0]?.watermark ?? 0);
@@ -255,10 +259,13 @@ export class SyncService {
         const status = payload.status || 'judged';
         const passed = Number(payload.passed ?? payload.result?.passed ?? 0);
         const total = Number(payload.total ?? payload.result?.total ?? 0);
-        const resultsJson = payload.results || payload.result?.results
-          ? JSON.stringify(payload.results || payload.result?.results)
-          : null;
-        const createdAt = payload.createdAt ? new Date(payload.createdAt) : new Date(op.clientTimestamp);
+        const resultsJson =
+          payload.results || payload.result?.results
+            ? JSON.stringify(payload.results || payload.result?.results)
+            : null;
+        const createdAt = payload.createdAt
+          ? new Date(payload.createdAt)
+          : new Date(op.clientTimestamp);
         const judgedAt = payload.judgedAt ? new Date(payload.judgedAt) : new Date();
 
         // 1. Insert or update submission
@@ -270,7 +277,8 @@ export class SyncService {
             passed = EXCLUDED.passed,
             total = EXCLUDED.total,
             results = EXCLUDED.results,
-            judged_at = EXCLUDED.judged_at;
+            judged_at = EXCLUDED.judged_at
+          WHERE submissions.user_id = EXCLUDED.user_id; -- never overwrite another user's submission
         `;
         await client.query(subSql, [
           subId,
@@ -292,7 +300,7 @@ export class SyncService {
             $1::uuid,
             $2::uuid,
             COUNT(*)::int,
-            (CASE WHEN bool_or(passed = total AND total > 0) THEN 1 ELSE 0 END),
+            bool_or(passed = total AND total > 0),
             MIN(CASE WHEN passed = total AND total > 0 THEN created_at ELSE NULL END),
             MAX(created_at)
           FROM submissions

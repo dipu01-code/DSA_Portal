@@ -18,18 +18,29 @@ export function rankRows(rows: LeaderboardRow[]) {
     .map((r, i) => ({ ...r, rank: i + 1 }));
 }
 
-export const leaderboardRoutes: FastifyPluginAsync<{ leaderboard: LeaderboardStore }> = async (app, { leaderboard }) => {
+export const leaderboardRoutes: FastifyPluginAsync<{ leaderboard: LeaderboardStore }> = async (
+  app,
+  { leaderboard }
+) => {
   // Public, like the spec says: no auth hook.
   app.get('/leaderboard', async (req) => {
-    const q = z.object({ ...PageQuery, period: z.enum(['week', 'all']).default('all') }).parse(req.query);
+    const q = z
+      .object({ ...PageQuery, period: z.enum(['week', 'all']).default('all') })
+      .parse(req.query);
     const since = q.period === 'week' ? new Date(Date.now() - WEEK_MS) : null;
     const ranked = rankRows(await leaderboard.rows(since));
-    return keysetPage(ranked, (r) => r.userId, decodeCursor(q.cursor), q.limit, ({ userId, username, solved, totalScore, rank }) => ({
-      userId,
-      username,
-      solved,
-      totalScore,
-      rank,
-    }));
+    return keysetPage(
+      ranked,
+      (r) => r.userId,
+      decodeCursor(q.cursor),
+      q.limit,
+      ({ userId, username, solved, totalScore, rank }) => ({
+        userId,
+        username,
+        solved,
+        totalScore,
+        rank,
+      })
+    );
   });
 };

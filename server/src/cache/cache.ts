@@ -14,11 +14,20 @@ export class RedisBackend implements CacheBackend {
   constructor(private redis: Redis) {}
   static fromUrl(url: string) {
     // Fail fast instead of queueing commands while Redis is down: the cache then just misses.
-    return new RedisBackend(new Redis(url, { maxRetriesPerRequest: 1, enableOfflineQueue: false, commandTimeout: 500, lazyConnect: false }));
+    return new RedisBackend(
+      new Redis(url, {
+        maxRetriesPerRequest: 1,
+        enableOfflineQueue: false,
+        commandTimeout: 500,
+        lazyConnect: false,
+      })
+    );
   }
   get = (k: string) => this.redis.get(k);
-  set = async (k: string, v: string, ttlMs: number) => void (await this.redis.set(k, v, 'PX', ttlMs));
-  setNx = async (k: string, v: string, ttlMs: number) => (await this.redis.set(k, v, 'PX', ttlMs, 'NX')) === 'OK';
+  set = async (k: string, v: string, ttlMs: number) =>
+    void (await this.redis.set(k, v, 'PX', ttlMs));
+  setNx = async (k: string, v: string, ttlMs: number) =>
+    (await this.redis.set(k, v, 'PX', ttlMs, 'NX')) === 'OK';
   del = async (...keys: string[]) => void (keys.length && (await this.redis.del(...keys)));
   incr = (k: string) => this.redis.incr(k);
   quit = () => this.redis.quit();
@@ -77,7 +86,13 @@ export class Cache {
 
   constructor(
     private backend: CacheBackend | null,
-    private opts: { prefix?: string; lockMs?: number; waitMs?: number; pollMs?: number; jitter?: () => number } = {}
+    private opts: {
+      prefix?: string;
+      lockMs?: number;
+      waitMs?: number;
+      pollMs?: number;
+      jitter?: () => number;
+    } = {}
   ) {}
 
   private get prefix() {
@@ -100,7 +115,9 @@ export class Cache {
 
   /** Key inside the current generation of a namespace, e.g. problems list variants. */
   async genKey(ns: string, ...parts: string[]) {
-    const gen = this.backend ? await this.safe(() => this.backend!.get(this.key('gen', ns)), null) : null;
+    const gen = this.backend
+      ? await this.safe(() => this.backend!.get(this.key('gen', ns)), null)
+      : null;
     return this.key(ns, `g${gen ?? 0}`, ...parts);
   }
 
@@ -114,7 +131,12 @@ export class Cache {
     return p;
   }
 
-  private async fetch<T>(b: CacheBackend, key: string, ttlS: number, load: () => Promise<T>): Promise<T> {
+  private async fetch<T>(
+    b: CacheBackend,
+    key: string,
+    ttlS: number,
+    load: () => Promise<T>
+  ): Promise<T> {
     const raw = await this.safe(() => b.get(key), null);
     if (raw !== null) {
       this.metrics.hits++;
@@ -136,7 +158,11 @@ export class Cache {
     try {
       const value = await load();
       const jitter = this.opts.jitter?.() ?? Math.random();
-      await this.safe(() => b.set(key, JSON.stringify(value ?? null), Math.round(ttlS * 1000 * (1 + 0.1 * jitter))), undefined);
+      await this.safe(
+        () =>
+          b.set(key, JSON.stringify(value ?? null), Math.round(ttlS * 1000 * (1 + 0.1 * jitter))),
+        undefined
+      );
       return value;
     } finally {
       await this.safe(() => b.del(lock), undefined);

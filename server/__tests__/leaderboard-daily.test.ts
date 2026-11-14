@@ -32,7 +32,11 @@ describe('GET /leaderboard and /daily-challenge (in-memory)', () => {
       status: 'judged',
       createdAt: judgedAt,
       judgedAt,
-      result: { problemId, status: passed ? 'passed' : 'failed', perTest: [{ id: '0', passed, expected: 1, actual: passed ? 1 : 2, runtimeMs: 1 }] },
+      result: {
+        problemId,
+        status: passed ? 'passed' : 'failed',
+        perTest: [{ id: '0', passed, expected: 1, actual: passed ? 1 : 2, runtimeMs: 1 }],
+      },
     };
     return submissions.save(s);
   };
@@ -52,12 +56,21 @@ describe('GET /leaderboard and /daily-challenge (in-memory)', () => {
   const board = async (q: string) => (await app.inject({ url: `/api/v1/leaderboard${q}` })).json();
 
   it('counts first solves only and filters by period', async () => {
-    expect((await board('')).data.map((r: { userId: string; solved: number; rank: number }) => [r.userId, r.solved, r.rank])).toEqual([
+    expect(
+      (await board('')).data.map((r: { userId: string; solved: number; rank: number }) => [
+        r.userId,
+        r.solved,
+        r.rank,
+      ])
+    ).toEqual([
       [u1, 2, 1],
       [u2, 1, 2],
     ]);
     // Last 7 days: one each, and u2 got there first.
-    expect((await board('?period=week')).data.map((r: { userId: string }) => r.userId)).toEqual([u2, u1]);
+    expect((await board('?period=week')).data.map((r: { userId: string }) => r.userId)).toEqual([
+      u2,
+      u1,
+    ]);
   });
 
   it('pages with a keyset cursor and keeps ranks across pages', async () => {
@@ -69,7 +82,11 @@ describe('GET /leaderboard and /daily-challenge (in-memory)', () => {
   });
 
   it("serves today's daily challenge, the same for everyone", async () => {
-    const get = (sub: string) => app.inject({ url: '/api/v1/daily-challenge', headers: { authorization: `Bearer ${app.jwt.sign({ sub })}` } });
+    const get = (sub: string) =>
+      app.inject({
+        url: '/api/v1/daily-challenge',
+        headers: { authorization: `Bearer ${app.jwt.sign({ sub })}` },
+      });
     const [a, b] = await Promise.all([get(u1), get(u2)]);
     expect(a.statusCode).toBe(200);
     expect(a.json()).toEqual(b.json());
@@ -84,7 +101,9 @@ describe('pickDaily', () => {
     expect(pickDaily('2026-11-13', ids)).toBe(pickDaily('2026-11-13', [...ids].reverse()));
   });
   it('varies across days and handles an empty list', () => {
-    const days = Array.from({ length: 30 }, (_, i) => utcDate(new Date(Date.UTC(2026, 0, 1) + i * DAY)));
+    const days = Array.from({ length: 30 }, (_, i) =>
+      utcDate(new Date(Date.UTC(2026, 0, 1) + i * DAY))
+    );
     expect(new Set(days.map((d) => pickDaily(d, ids))).size).toBeGreaterThan(1);
     expect(pickDaily('2026-11-13', [])).toBeNull();
   });

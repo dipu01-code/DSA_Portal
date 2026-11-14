@@ -36,10 +36,10 @@ components:
       properties:
         error:
           type: string
-          example: "VALIDATION_ERROR"
+          example: 'VALIDATION_ERROR'
         message:
           type: string
-          example: "difficulty must be one of Easy, Medium, Hard"
+          example: 'difficulty must be one of Easy, Medium, Hard'
         statusCode:
           type: integer
           example: 400
@@ -48,7 +48,7 @@ components:
           format: date-time
         path:
           type: string
-          example: "/api/v1/problems"
+          example: '/api/v1/problems'
 
     # ---- Keyset cursor pagination ----
     # Clients paginate by passing the cursor (last seen sort value + id)
@@ -290,31 +290,118 @@ components:
           $ref: '#/components/schemas/Problem'
 
     # ---- Sync ----
+    SyncOperation:
+      type: object
+      description: One client mutation. The server takes the user from the token, not from userId.
+      required:
+        [opId, deviceId, entity, operationType, payload, clientTimestamp, hlc, schemaVersion]
+      properties:
+        serverSeq:
+          type: integer
+          description: Set by the server (pull only); the pull cursor.
+        opId:
+          type: string
+          format: uuid
+          description: Client-generated; makes push idempotent.
+        deviceId:
+          type: string
+        userId:
+          type: string
+        entity:
+          type: string
+          enum: [submission, attempt, user_stats, settings, tombstone, problem]
+        operationType:
+          type: string
+          enum: [INSERT, UPDATE, DELETE, UPSERT]
+        payload:
+          type: object
+        clientTimestamp:
+          type: string
+          format: date-time
+        hlc:
+          type: string
+          description: Hybrid logical clock "<ms>.<counter>.<deviceId>"; last-write-wins for settings.
+        schemaVersion:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
     SyncPush:
       type: object
-      required: [problemsAttempted, submissions]
+      required: [deviceId, clientVersion, schemaVersion, operations]
       properties:
-        problemsAttempted:
+        deviceId:
+          type: string
+        clientVersion:
+          type: string
+        schemaVersion:
+          type: integer
+        operations:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/SyncOperation'
+
+    SyncPushResult:
+      type: object
+      required: [success, acknowledgedOpIds, duplicateOpIds, serverSeqWatermark, serverTimestamp]
+      properties:
+        success:
+          type: boolean
+        acknowledgedOpIds:
           type: array
           items:
             type: string
-        submissions:
+        duplicateOpIds:
           type: array
+          description: Already applied earlier (safe retry); also listed in acknowledgedOpIds.
           items:
-            type: object
+            type: string
+        serverSeqWatermark:
+          type: integer
+        serverTimestamp:
+          type: string
+          format: date-time
 
     SyncPull:
       type: object
-      required: [problems, submissions]
+      required: [cursor, hasMore, operations]
       properties:
+        cursor:
+          type: integer
+          description: Pass it back as ?cursor= for the next page.
+        hasMore:
+          type: boolean
+        operations:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncOperation'
+
+    SyncBootstrap:
+      type: object
+      required: [watermarkSeq, problems, userSubmissions, userStats, userSettings, generatedAt]
+      properties:
+        watermarkSeq:
+          type: integer
+          description: Start pulling from this cursor after applying the snapshot.
         problems:
           type: array
           items:
-            $ref: '#/components/schemas/ProblemSummary'
-        submissions:
+            type: object
+        userSubmissions:
           type: array
           items:
-            $ref: '#/components/schemas/Submission'
+            type: object
+        userStats:
+          type: array
+          items:
+            type: object
+        userSettings:
+          type: object
+        generatedAt:
+          type: string
+          format: date-time
 
     # ---- Dead-letter list entry (Day 6) ----
     FailedJob:
@@ -382,7 +469,6 @@ components:
 # Paths
 ###############################################################################
 paths:
-
   # ===========================================================================
   # Auth
   # ===========================================================================
@@ -1000,7 +1086,8 @@ paths:
           application/json:
             schema:
               type: object
-              required: [title, topic, difficulty, description, starterCode, testCases, hints, solution]
+              required:
+                [title, topic, difficulty, description, starterCode, testCases, hints, solution]
               properties:
                 title:
                   type: string
@@ -1254,7 +1341,7 @@ paths:
     post:
       tags: [sync]
       operationId: syncPush
-      summary: Push local (SQLite/CLI) attempts and submissions to server
+      summary: Push a batch of offline client operations (idempotent by opId, max 100)
       security:
         - bearerAuth: []
       requestBody:
@@ -1265,19 +1352,11 @@ paths:
               $ref: '#/components/schemas/SyncPush'
       responses:
         '200':
-          description: Push accepted
+          description: Operations applied (or already applied)
           content:
             application/json:
               schema:
-                type: object
-                required: [accepted, conflicts]
-                properties:
-                  accepted:
-                    type: integer
-                  conflicts:
-                    type: array
-                    items:
-                      type: object
+                $ref: '#/components/schemas/SyncPushResult'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -1287,22 +1366,52 @@ paths:
     get:
       tags: [sync]
       operationId: syncPull
-      summary: Pull server-side problems and submissions to local client
+      summary: Pull this user's operations after a server_seq cursor
       security:
         - bearerAuth: []
       parameters:
-        - name: since
+        - name: cursor
           in: query
           schema:
-            type: string
-            format: date-time
-            description: Only return records changed after this timestamp
+            type: integer
+            minimum: 0
+            default: 0
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
       responses:
         '200':
-          description: Data to sync down
+          description: One page of operations
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SyncPull'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '410':
+          description: SYNC_CURSOR_EXPIRED, the cursor is older than the 90-day tombstone window; call /sync/bootstrap
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/sync/bootstrap:
+    get:
+      tags: [sync]
+      operationId: syncBootstrap
+      summary: Full snapshot for a new device or after SYNC_CURSOR_EXPIRED
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncBootstrap'
         '401':
           $ref: '#/components/responses/Unauthorized'

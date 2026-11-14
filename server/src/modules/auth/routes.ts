@@ -53,10 +53,18 @@ export interface AuthRouteOptions {
   throttle?: LoginThrottle;
 }
 
-export const authRoutes: FastifyPluginAsync<AuthRouteOptions> = async (app, { auth, throttle = new LoginThrottle() }) => {
+export const authRoutes: FastifyPluginAsync<AuthRouteOptions> = async (
+  app,
+  { auth, throttle = new LoginThrottle() }
+) => {
   const signAccess = (userId: string) => app.jwt.sign({ sub: userId }, { expiresIn: ACCESS_TTL_S });
 
-  async function startSession(req: FastifyRequest, reply: FastifyReply, userId: string, familyId?: string) {
+  async function startSession(
+    req: FastifyRequest,
+    reply: FastifyReply,
+    userId: string,
+    familyId?: string
+  ) {
     const refreshToken = randomBytes(32).toString('base64url');
     await auth.createSession({
       userId,
@@ -80,7 +88,9 @@ export const authRoutes: FastifyPluginAsync<AuthRouteOptions> = async (app, { au
       const user = await auth.createUser({ username: body.username, email, passwordHash });
       return reply.code(201).send(toApiUser(user));
     } catch (err) {
-      if (err instanceof DuplicateUserError) throw new HttpError(409, 'CONFLICT', 'Username or email already exists');
+      if (err instanceof DuplicateUserError) {
+        throw new HttpError(409, 'CONFLICT', 'Username or email already exists');
+      }
       throw err;
     }
   });
@@ -112,7 +122,10 @@ export const authRoutes: FastifyPluginAsync<AuthRouteOptions> = async (app, { au
     if (!token) throw unauthorized('Missing refresh token');
     const result = await auth.consumeSession(sha256(token));
     if (result.status === 'reused') {
-      req.log.warn({ userId: result.userId }, 'refresh token reuse detected; session family revoked');
+      req.log.warn(
+        { userId: result.userId },
+        'refresh token reuse detected; session family revoked'
+      );
     }
     if (result.status !== 'ok') {
       setRefreshCookie(reply, '', 0);

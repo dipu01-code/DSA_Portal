@@ -1,7 +1,12 @@
 import { createHash, randomUUID } from 'crypto';
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import type { AuditRepository, ProblemRepository, Submission, SubmissionRepository } from '@dsa-portal/core';
+import type {
+  AuditRepository,
+  ProblemRepository,
+  Submission,
+  SubmissionRepository,
+} from '@dsa-portal/core';
 import { decodeCursor, HttpError, keysetPage, notFound } from '../../lib/http';
 import { findProblemOr404, IdParams, PageQuery } from '../problems/routes';
 import type { SubmissionQueue } from './queue';
@@ -9,7 +14,11 @@ import type { SubmissionQueue } from './queue';
 const SubmissionCreate = z.object({
   problemId: z.string().min(1),
   // PostgreSQL text cannot hold NUL; rejecting it here turns a 500 into a clear 400.
-  code: z.string().min(1).max(100_000).refine((c) => !c.includes('\0'), 'must not contain NUL characters'),
+  code: z
+    .string()
+    .min(1)
+    .max(100_000)
+    .refine((c) => !c.includes('\0'), 'must not contain NUL characters'),
 });
 const IdempotencyKey = z.string().min(1).max(128).optional();
 
@@ -67,11 +76,16 @@ export const submissionRoutes: FastifyPluginAsync<{
     const findReplay = async () => {
       const existing = key ? await submissions.findByIdempotencyKey(userId, key) : null;
       if (existing && (existing.problemId !== body.problemId || existing.code !== body.code)) {
-        throw new HttpError(409, 'IDEMPOTENCY_KEY_REUSED', 'Idempotency-Key was already used with a different request body');
+        throw new HttpError(
+          409,
+          'IDEMPOTENCY_KEY_REUSED',
+          'Idempotency-Key was already used with a different request body'
+        );
       }
       return existing;
     };
-    const accepted = (s: Submission) => reply.code(202).send({ submissionId: s.id, status: s.status });
+    const accepted = (s: Submission) =>
+      reply.code(202).send({ submissionId: s.id, status: s.status });
 
     const replay = await findReplay();
     if (replay) return accepted(replay);
@@ -85,14 +99,22 @@ export const submissionRoutes: FastifyPluginAsync<{
       if (nth) {
         const retryAfterS = Math.max(1, Math.ceil((nth.getTime() + windowMs - Date.now()) / 1000));
         reply.header('retry-after', String(retryAfterS));
-        throw new HttpError(429, 'QUOTA_EXCEEDED', `Submission quota of ${limit} per ${label} reached; retry in ${retryAfterS}s`);
+        throw new HttpError(
+          429,
+          'QUOTA_EXCEEDED',
+          `Submission quota of ${limit} per ${label} reached; retry in ${retryAfterS}s`
+        );
       }
     }
 
     // Backpressure: refuse new work while the workers are far behind (a replay above adds none).
     if ((await queue.waitingCount()) >= backpressure.maxWaiting) {
       reply.header('retry-after', String(backpressure.retryAfterS));
-      throw new HttpError(429, 'QUEUE_FULL', `Too many submissions waiting; retry in ${backpressure.retryAfterS}s`);
+      throw new HttpError(
+        429,
+        'QUEUE_FULL',
+        `Too many submissions waiting; retry in ${backpressure.retryAfterS}s`
+      );
     }
 
     const problem = await findProblemOr404(problems, body.problemId);
@@ -123,11 +145,17 @@ export const submissionRoutes: FastifyPluginAsync<{
       action: 'submission.create',
       entityType: 'submission',
       entityId: submission.id,
-      newValue: { problemId: problem.id, codeSha256: createHash('sha256').update(body.code).digest('hex'), codeLength: body.code.length },
+      newValue: {
+        problemId: problem.id,
+        codeSha256: createHash('sha256').update(body.code).digest('hex'),
+        codeLength: body.code.length,
+      },
       ipAddress: req.ip,
     };
     // The submission is already queued, so a failed audit insert must not turn into an error for the user; the log line keeps the record.
-    await audit?.log(entry).catch((err) => req.log.error({ err, audit: entry }, 'audit log write failed'));
+    await audit
+      ?.log(entry)
+      .catch((err) => req.log.error({ err, audit: entry }, 'audit log write failed'));
     return accepted(submission);
   });
 

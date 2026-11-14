@@ -23,7 +23,11 @@ export const SEED_PROBLEMS: Problem[] = [
     hints: [
       { level: 1, content: 'A brute force approach checks all pairs, taking O(n^2) time.' },
       { level: 2, content: 'Can you use a hash map to look up the complement in O(1) time?' },
-      { level: 3, content: 'Store each number and its index in a Map. For each element, check if target - num exists in the map.' },
+      {
+        level: 3,
+        content:
+          'Store each number and its index in a Map. For each element, check if target - num exists in the map.',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { nums, target } = input;\n  const map = new Map();\n  for (let i = 0; i < nums.length; i++) {\n    const comp = target - nums[i];\n    if (map.has(comp)) return [map.get(comp), i];\n    map.set(nums[i], i);\n  }\n  return [];\n}',
@@ -76,7 +80,11 @@ export const SEED_PROBLEMS: Problem[] = [
     ],
     hints: [
       { level: 1, content: 'A set stores only unique values.' },
-      { level: 2, content: 'Compare the size of the set with the length of the array, or check set.has() during iteration.' },
+      {
+        level: 2,
+        content:
+          'Compare the size of the set with the length of the array, or check set.has() during iteration.',
+      },
       { level: 3, content: 'new Set(nums).size !== nums.length provides a clean one-liner.' },
     ],
     solution: {
@@ -104,7 +112,11 @@ export const SEED_PROBLEMS: Problem[] = [
     hints: [
       { level: 1, content: 'Can you precompute prefix products and suffix products?' },
       { level: 2, content: 'Prefix product up to i gives product of all elements to the left.' },
-      { level: 3, content: 'First pass computes left prefix products. Second pass iterates backwards accumulating right suffix products.' },
+      {
+        level: 3,
+        content:
+          'First pass computes left prefix products. Second pass iterates backwards accumulating right suffix products.',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { nums } = input;\n  const n = nums.length;\n  const res = new Array(n).fill(1);\n  let left = 1;\n  for (let i = 0; i < n; i++) {\n    res[i] = left;\n    left *= nums[i];\n  }\n  let right = 1;\n  for (let i = n - 1; i >= 0; i--) {\n    res[i] *= right;\n    right *= nums[i];\n  }\n  return res;\n}',
@@ -130,8 +142,15 @@ export const SEED_PROBLEMS: Problem[] = [
     ],
     hints: [
       { level: 1, content: 'Start with the widest container using two pointers at the ends.' },
-      { level: 2, content: 'The area is limited by the shorter line: min(height[left], height[right]) * (right - left).' },
-      { level: 3, content: 'Always move the pointer pointing to the shorter vertical line inward.' },
+      {
+        level: 2,
+        content:
+          'The area is limited by the shorter line: min(height[left], height[right]) * (right - left).',
+      },
+      {
+        level: 3,
+        content: 'Always move the pointer pointing to the shorter vertical line inward.',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { height } = input;\n  let left = 0, right = height.length - 1;\n  let maxArea = 0;\n  while (left < right) {\n    const w = right - left;\n    const h = Math.min(height[left], height[right]);\n    maxArea = Math.max(maxArea, w * h);\n    if (height[left] < height[right]) left++;\n    else right--;\n  }\n  return maxArea;\n}',
@@ -161,7 +180,10 @@ export const SEED_PROBLEMS: Problem[] = [
     ],
     hints: [
       { level: 1, content: 'If the lengths of s and t differ, they cannot be anagrams.' },
-      { level: 2, content: 'Count the frequency of each character in s and decrement for characters in t.' },
+      {
+        level: 2,
+        content: 'Count the frequency of each character in s and decrement for characters in t.',
+      },
       { level: 3, content: 'Use an array of size 26 or a Map to track character counts.' },
     ],
     solution: {
@@ -189,7 +211,11 @@ export const SEED_PROBLEMS: Problem[] = [
     hints: [
       { level: 1, content: 'Clean the string by lowercasing and stripping non-alphanumerics.' },
       { level: 2, content: 'Use two pointers from both ends moving towards the center.' },
-      { level: 3, content: 'Cleaned string s === cleaned.split("").reverse().join("") or two pointer while(l < r).' },
+      {
+        level: 3,
+        content:
+          'Cleaned string s === cleaned.split("").reverse().join("") or two pointer while(l < r).',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { s } = input;\n  const cleaned = s.toLowerCase().replace(/[^a-z0-9]/g, "");\n  let l = 0, r = cleaned.length - 1;\n  while (l < r) {\n    if (cleaned[l] !== cleaned[r]) return false;\n    l++;\n    r--;\n  }\n  return true;\n}',
@@ -216,7 +242,10 @@ export const SEED_PROBLEMS: Problem[] = [
     hints: [
       { level: 1, content: 'Use a sliding window defined by two pointers [left, right].' },
       { level: 2, content: 'Track the last seen index of each character in a map.' },
-      { level: 3, content: 'When a repeated character is encountered, jump the left pointer to lastSeen + 1.' },
+      {
+        level: 3,
+        content: 'When a repeated character is encountered, jump the left pointer to lastSeen + 1.',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { s } = input;\n  const seen = new Map();\n  let maxLen = 0, left = 0;\n  for (let right = 0; right < s.length; right++) {\n    const char = s[right];\n    if (seen.has(char) && seen.get(char) >= left) {\n      left = seen.get(char) + 1;\n    }\n    seen.set(char, right);\n    maxLen = Math.max(maxLen, right - left + 1);\n  }\n  return maxLen;\n}',
@@ -242,7 +271,10 @@ export const SEED_PROBLEMS: Problem[] = [
     ],
     hints: [
       { level: 1, content: 'Start by assuming the first string is the common prefix.' },
-      { level: 2, content: 'Trim the prefix from the end while the next string does not start with it.' },
+      {
+        level: 2,
+        content: 'Trim the prefix from the end while the next string does not start with it.',
+      },
       { level: 3, content: 'while (str.indexOf(prefix) !== 0) prefix = prefix.slice(0, -1).' },
     ],
     solution: {
@@ -270,7 +302,11 @@ export const SEED_PROBLEMS: Problem[] = [
     hints: [
       { level: 1, content: 'Trim leading whitespace first.' },
       { level: 2, content: 'Check for "+" or "-" to determine sign.' },
-      { level: 3, content: 'Accumulate numeric digits until non-digit is hit, then clamp to 32-bit integer limits.' },
+      {
+        level: 3,
+        content:
+          'Accumulate numeric digits until non-digit is hit, then clamp to 32-bit integer limits.',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { s } = input;\n  let i = 0, sign = 1, res = 0;\n  const str = s.trim();\n  if (!str) return 0;\n  if (str[0] === "-") { sign = -1; i++; }\n  else if (str[0] === "+") { i++; }\n  while (i < str.length && str[i] >= "0" && str[i] <= "9") {\n    res = res * 10 + (str.charCodeAt(i) - 48);\n    i++;\n  }\n  res *= sign;\n  const INT_MAX = 2147483647, INT_MIN = -2147483648;\n  if (res > INT_MAX) return INT_MAX;\n  if (res < INT_MIN) return INT_MIN;\n  return res;\n}',
@@ -299,9 +335,20 @@ export const SEED_PROBLEMS: Problem[] = [
       { input: { list: [10, 20, 30] }, expected: [30, 20, 10] },
     ],
     hints: [
-      { level: 1, content: 'Iterate through the list while maintaining a reference to the previous element.' },
-      { level: 2, content: 'In an iterative pointer approach, prev = null, curr = head. At each step, next = curr.next, curr.next = prev, prev = curr, curr = next.' },
-      { level: 3, content: 'For array representation, reversing in-place or unshifting produces the reversed sequence.' },
+      {
+        level: 1,
+        content: 'Iterate through the list while maintaining a reference to the previous element.',
+      },
+      {
+        level: 2,
+        content:
+          'In an iterative pointer approach, prev = null, curr = head. At each step, next = curr.next, curr.next = prev, prev = curr, curr = next.',
+      },
+      {
+        level: 3,
+        content:
+          'For array representation, reversing in-place or unshifting produces the reversed sequence.',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { list } = input;\n  const res = [];\n  for (let i = list.length - 1; i >= 0; i--) {\n    res.push(list[i]);\n  }\n  return res;\n}',
@@ -328,7 +375,10 @@ export const SEED_PROBLEMS: Problem[] = [
     hints: [
       { level: 1, content: 'Use two pointers to compare the current heads of both lists.' },
       { level: 2, content: 'Append the smaller element to the result and advance its pointer.' },
-      { level: 3, content: 'Once one list is exhausted, append the remaining elements of the other list.' },
+      {
+        level: 3,
+        content: 'Once one list is exhausted, append the remaining elements of the other list.',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { list1, list2 } = input;\n  let i = 0, j = 0;\n  const res = [];\n  while (i < list1.length && j < list2.length) {\n    if (list1[i] <= list2[j]) res.push(list1[i++]);\n    else res.push(list2[j++]);\n  }\n  while (i < list1.length) res.push(list1[i++]);\n  while (j < list2.length) res.push(list2[j++]);\n  return res;\n}',
@@ -354,8 +404,15 @@ export const SEED_PROBLEMS: Problem[] = [
     ],
     hints: [
       { level: 1, content: 'Floyd’s Cycle-Finding Algorithm (Tortoise and Hare).' },
-      { level: 2, content: 'If pos is -1, there is no cycle. If pos >= 0 and within bounds, a cycle exists.' },
-      { level: 3, content: 'Fast pointer moves 2 steps, slow pointer moves 1 step. If they meet, a cycle exists.' },
+      {
+        level: 2,
+        content: 'If pos is -1, there is no cycle. If pos >= 0 and within bounds, a cycle exists.',
+      },
+      {
+        level: 3,
+        content:
+          'Fast pointer moves 2 steps, slow pointer moves 1 step. If they meet, a cycle exists.',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { nodes, pos } = input;\n  return pos >= 0 && pos < nodes.length;\n}',
@@ -382,7 +439,11 @@ export const SEED_PROBLEMS: Problem[] = [
     hints: [
       { level: 1, content: 'Fast and slow pointer approach.' },
       { level: 2, content: 'Fast pointer moves twice as fast as slow pointer.' },
-      { level: 3, content: 'When fast reaches the end, slow is at the middle. For array, slice from Math.floor(len / 2).' },
+      {
+        level: 3,
+        content:
+          'When fast reaches the end, slow is at the middle. For array, slice from Math.floor(len / 2).',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { list } = input;\n  const mid = Math.floor(list.length / 2);\n  return list.slice(mid);\n}',
@@ -408,7 +469,10 @@ export const SEED_PROBLEMS: Problem[] = [
     ],
     hints: [
       { level: 1, content: 'Use two pointers separated by n steps.' },
-      { level: 2, content: 'Advance first pointer n steps ahead, then move both until first hits the end.' },
+      {
+        level: 2,
+        content: 'Advance first pointer n steps ahead, then move both until first hits the end.',
+      },
       { level: 3, content: 'Target index from start is list.length - n.' },
     ],
     solution: {
@@ -439,8 +503,15 @@ export const SEED_PROBLEMS: Problem[] = [
     ],
     hints: [
       { level: 1, content: 'Recursive depth: 1 + max(depth(left), depth(right)).' },
-      { level: 2, content: 'For array representation, node at index i has children at 2*i + 1 and 2*i + 2.' },
-      { level: 3, content: 'Recursive helper: function getDepth(i) { if (i >= tree.length || tree[i] === null) return 0; return 1 + Math.max(getDepth(2*i+1), getDepth(2*i+2)); }.' },
+      {
+        level: 2,
+        content: 'For array representation, node at index i has children at 2*i + 1 and 2*i + 2.',
+      },
+      {
+        level: 3,
+        content:
+          'Recursive helper: function getDepth(i) { if (i >= tree.length || tree[i] === null) return 0; return 1 + Math.max(getDepth(2*i+1), getDepth(2*i+2)); }.',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { tree } = input;\n  if (!tree || tree.length === 0 || tree[0] === null) return 0;\n  function depth(idx) {\n    if (idx >= tree.length || tree[idx] === null || tree[idx] === undefined) return 0;\n    return 1 + Math.max(depth(2 * idx + 1), depth(2 * idx + 2));\n  }\n  return depth(0);\n}',
@@ -492,7 +563,11 @@ export const SEED_PROBLEMS: Problem[] = [
       { input: { p: [10], q: [10] }, expected: true },
     ],
     hints: [
-      { level: 1, content: 'Two trees are identical if their root values match and their left/right subtrees match.' },
+      {
+        level: 1,
+        content:
+          'Two trees are identical if their root values match and their left/right subtrees match.',
+      },
       { level: 2, content: 'Check base cases: both null = true, one null = false.' },
       { level: 3, content: 'Compare element-by-element in level order array.' },
     ],
@@ -521,7 +596,11 @@ export const SEED_PROBLEMS: Problem[] = [
     hints: [
       { level: 1, content: 'Use a Queue for Breadth-First Search (BFS).' },
       { level: 2, content: 'At each level, record queue.length and process that many nodes.' },
-      { level: 3, content: 'For array representation, track level index: level 0 has [0], level 1 has [1, 2], etc.' },
+      {
+        level: 3,
+        content:
+          'For array representation, track level index: level 0 has [0], level 1 has [1, 2], etc.',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { tree } = input;\n  if (!tree || tree.length === 0 || tree[0] === null) return [];\n  const res = [];\n  function dfs(idx, level) {\n    if (idx >= tree.length || tree[idx] === null || tree[idx] === undefined) return;\n    if (!res[level]) res[level] = [];\n    res[level].push(tree[idx]);\n    dfs(2 * idx + 1, level + 1);\n    dfs(2 * idx + 2, level + 1);\n  }\n  dfs(0, 0);\n  return res;\n}',
@@ -547,8 +626,16 @@ export const SEED_PROBLEMS: Problem[] = [
     ],
     hints: [
       { level: 1, content: 'Every node must satisfy a valid range: min < val < max.' },
-      { level: 2, content: 'Passing left: max bound becomes node.val. Passing right: min bound becomes node.val.' },
-      { level: 3, content: 'function validate(idx, min, max) { if (tree[idx] <= min || tree[idx] >= max) return false; ... }.' },
+      {
+        level: 2,
+        content:
+          'Passing left: max bound becomes node.val. Passing right: min bound becomes node.val.',
+      },
+      {
+        level: 3,
+        content:
+          'function validate(idx, min, max) { if (tree[idx] <= min || tree[idx] >= max) return false; ... }.',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { tree } = input;\n  if (!tree || tree.length === 0) return true;\n  function validate(idx, min, max) {\n    if (idx >= tree.length || tree[idx] === null || tree[idx] === undefined) return true;\n    const val = tree[idx];\n    if (val <= min || val >= max) return false;\n    return validate(2 * idx + 1, min, val) && validate(2 * idx + 2, val, max);\n  }\n  return validate(0, -Infinity, Infinity);\n}',
@@ -597,7 +684,11 @@ export const SEED_PROBLEMS: Problem[] = [
       { input: { grid: [] }, expected: 0 },
     ],
     hints: [
-      { level: 1, content: 'Iterate through the grid. When you find a "1", increment island count and sink the island.' },
+      {
+        level: 1,
+        content:
+          'Iterate through the grid. When you find a "1", increment island count and sink the island.',
+      },
       { level: 2, content: 'Use DFS or BFS to visit and mark all connected "1"s as "0".' },
       { level: 3, content: 'dfs(r, c) explores (r+1,c), (r-1,c), (r,c+1), (r,c-1).' },
     ],
@@ -618,30 +709,82 @@ export const SEED_PROBLEMS: Problem[] = [
       'function solve(input) {\n  const { image, sr, sc, color } = input;\n  // Your solution here\n  return [];\n}',
     testCases: [
       {
-        input: { image: [[1, 1, 1], [1, 1, 0], [1, 0, 1]], sr: 1, sc: 1, color: 2 },
-        expected: [[2, 2, 2], [2, 2, 0], [2, 0, 1]],
+        input: {
+          image: [
+            [1, 1, 1],
+            [1, 1, 0],
+            [1, 0, 1],
+          ],
+          sr: 1,
+          sc: 1,
+          color: 2,
+        },
+        expected: [
+          [2, 2, 2],
+          [2, 2, 0],
+          [2, 0, 1],
+        ],
       },
       {
-        input: { image: [[0, 0, 0], [0, 0, 0]], sr: 0, sc: 0, color: 0 },
-        expected: [[0, 0, 0], [0, 0, 0]],
+        input: {
+          image: [
+            [0, 0, 0],
+            [0, 0, 0],
+          ],
+          sr: 0,
+          sc: 0,
+          color: 0,
+        },
+        expected: [
+          [0, 0, 0],
+          [0, 0, 0],
+        ],
       },
       {
         input: { image: [[0]], sr: 0, sc: 0, color: 1 },
         expected: [[1]],
       },
       {
-        input: { image: [[1, 2], [3, 4]], sr: 1, sc: 1, color: 5 },
-        expected: [[1, 2], [3, 5]],
+        input: {
+          image: [
+            [1, 2],
+            [3, 4],
+          ],
+          sr: 1,
+          sc: 1,
+          color: 5,
+        },
+        expected: [
+          [1, 2],
+          [3, 5],
+        ],
       },
       {
-        input: { image: [[2, 2], [2, 2]], sr: 0, sc: 1, color: 9 },
-        expected: [[9, 9], [9, 9]],
+        input: {
+          image: [
+            [2, 2],
+            [2, 2],
+          ],
+          sr: 0,
+          sc: 1,
+          color: 9,
+        },
+        expected: [
+          [9, 9],
+          [9, 9],
+        ],
       },
     ],
     hints: [
-      { level: 1, content: 'Check if the target pixel already has the new color (avoid infinite loop).' },
+      {
+        level: 1,
+        content: 'Check if the target pixel already has the new color (avoid infinite loop).',
+      },
       { level: 2, content: 'Store originalColor = image[sr][sc].' },
-      { level: 3, content: 'DFS to all 4 neighbors matching originalColor, setting them to color.' },
+      {
+        level: 3,
+        content: 'DFS to all 4 neighbors matching originalColor, setting them to color.',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { image, sr, sc, color } = input;\n  const orig = image[sr][sc];\n  if (orig === color) return image;\n  const m = image.length, n = image[0].length;\n  function dfs(r, c) {\n    if (r < 0 || c < 0 || r >= m || c >= n || image[r][c] !== orig) return;\n    image[r][c] = color;\n    dfs(r + 1, c);\n    dfs(r - 1, c);\n    dfs(r, c + 1);\n    dfs(r, c - 1);\n  }\n  dfs(sr, sc);\n  return image;\n}',
@@ -659,16 +802,48 @@ export const SEED_PROBLEMS: Problem[] = [
     starterCode:
       'function solve(input) {\n  const { adjList } = input;\n  // Your solution here\n  return [];\n}',
     testCases: [
-      { input: { adjList: [[2, 4], [1, 3], [2, 4], [1, 3]] }, expected: [[2, 4], [1, 3], [2, 4], [1, 3]] },
+      {
+        input: {
+          adjList: [
+            [2, 4],
+            [1, 3],
+            [2, 4],
+            [1, 3],
+          ],
+        },
+        expected: [
+          [2, 4],
+          [1, 3],
+          [2, 4],
+          [1, 3],
+        ],
+      },
       { input: { adjList: [[]] }, expected: [[]] },
       { input: { adjList: [] }, expected: [] },
       { input: { adjList: [[2], [1]] }, expected: [[2], [1]] },
-      { input: { adjList: [[2, 3], [1, 3], [1, 2]] }, expected: [[2, 3], [1, 3], [1, 2]] },
+      {
+        input: {
+          adjList: [
+            [2, 3],
+            [1, 3],
+            [1, 2],
+          ],
+        },
+        expected: [
+          [2, 3],
+          [1, 3],
+          [1, 2],
+        ],
+      },
     ],
     hints: [
       { level: 1, content: 'Use a hash map to map original nodes to their cloned copies.' },
       { level: 2, content: 'DFS or BFS traversing every edge.' },
-      { level: 3, content: 'Deep copying an adjacency list creates an independent replica of all neighbor arrays.' },
+      {
+        level: 3,
+        content:
+          'Deep copying an adjacency list creates an independent replica of all neighbor arrays.',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { adjList } = input;\n  if (!adjList || adjList.length === 0) return [];\n  return adjList.map(neighbors => [...neighbors]);\n}',
@@ -687,15 +862,50 @@ export const SEED_PROBLEMS: Problem[] = [
       'function solve(input) {\n  const { numCourses, prerequisites } = input;\n  // Your solution here\n  return false;\n}',
     testCases: [
       { input: { numCourses: 2, prerequisites: [[1, 0]] }, expected: true },
-      { input: { numCourses: 2, prerequisites: [[1, 0], [0, 1]] }, expected: false },
+      {
+        input: {
+          numCourses: 2,
+          prerequisites: [
+            [1, 0],
+            [0, 1],
+          ],
+        },
+        expected: false,
+      },
       { input: { numCourses: 1, prerequisites: [] }, expected: true },
-      { input: { numCourses: 3, prerequisites: [[0, 1], [1, 2]] }, expected: true },
-      { input: { numCourses: 3, prerequisites: [[0, 1], [1, 2], [2, 0]] }, expected: false },
+      {
+        input: {
+          numCourses: 3,
+          prerequisites: [
+            [0, 1],
+            [1, 2],
+          ],
+        },
+        expected: true,
+      },
+      {
+        input: {
+          numCourses: 3,
+          prerequisites: [
+            [0, 1],
+            [1, 2],
+            [2, 0],
+          ],
+        },
+        expected: false,
+      },
     ],
     hints: [
       { level: 1, content: 'This problem is equivalent to detecting a cycle in a directed graph.' },
-      { level: 2, content: 'Kahn’s algorithm using indegree array or 3-color DFS cycle detection.' },
-      { level: 3, content: 'Maintain in-degree for each course. Enqueue courses with in-degree 0. If processed count === numCourses, return true.' },
+      {
+        level: 2,
+        content: 'Kahn’s algorithm using indegree array or 3-color DFS cycle detection.',
+      },
+      {
+        level: 3,
+        content:
+          'Maintain in-degree for each course. Enqueue courses with in-degree 0. If processed count === numCourses, return true.',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { numCourses, prerequisites } = input;\n  const inDegree = new Array(numCourses).fill(0);\n  const adj = Array.from({ length: numCourses }, () => []);\n  for (const [dest, src] of prerequisites) {\n    adj[src].push(dest);\n    inDegree[dest]++;\n  }\n  const q = [];\n  for (let i = 0; i < numCourses; i++) {\n    if (inDegree[i] === 0) q.push(i);\n  }\n  let count = 0;\n  while (q.length > 0) {\n    const node = q.shift();\n    count++;\n    for (const neighbor of adj[node]) {\n      inDegree[neighbor]--;\n      if (inDegree[neighbor] === 0) q.push(neighbor);\n    }\n  }\n  return count === numCourses;\n}',
@@ -731,12 +941,25 @@ export const SEED_PROBLEMS: Problem[] = [
       },
       { input: { beginWord: 'a', endWord: 'c', wordList: ['a', 'b', 'c'] }, expected: 2 },
       { input: { beginWord: 'hot', endWord: 'dog', wordList: ['hot', 'dog'] }, expected: 0 },
-      { input: { beginWord: 'cold', endWord: 'warm', wordList: ['cold', 'cord', 'card', 'ward', 'warm'] }, expected: 5 },
+      {
+        input: {
+          beginWord: 'cold',
+          endWord: 'warm',
+          wordList: ['cold', 'cord', 'card', 'ward', 'warm'],
+        },
+        expected: 5,
+      },
     ],
     hints: [
       { level: 1, content: 'Shortest path in an unweighted graph is solved using BFS.' },
-      { level: 2, content: 'Treat each word as a node. Edges exist between words differing by 1 char.' },
-      { level: 3, content: 'At each BFS step, mutate each letter from "a" to "z" and look up in a Set.' },
+      {
+        level: 2,
+        content: 'Treat each word as a node. Edges exist between words differing by 1 char.',
+      },
+      {
+        level: 3,
+        content: 'At each BFS step, mutate each letter from "a" to "z" and look up in a Set.',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { beginWord, endWord, wordList } = input;\n  const wordSet = new Set(wordList);\n  if (!wordSet.has(endWord)) return 0;\n  let queue = [[beginWord, 1]];\n  const visited = new Set([beginWord]);\n  while (queue.length > 0) {\n    const [word, level] = queue.shift();\n    if (word === endWord) return level;\n    for (let i = 0; i < word.length; i++) {\n      for (let c = 97; c <= 122; c++) {\n        const char = String.fromCharCode(c);\n        const nextWord = word.slice(0, i) + char + word.slice(i + 1);\n        if (wordSet.has(nextWord) && !visited.has(nextWord)) {\n          visited.add(nextWord);\n          queue.push([nextWord, level + 1]);\n        }\n      }\n    }\n  }\n  return 0;\n}',
@@ -793,8 +1016,14 @@ export const SEED_PROBLEMS: Problem[] = [
     ],
     hints: [
       { level: 1, content: 'Define dp[i] as the minimum coins needed to make amount i.' },
-      { level: 2, content: 'Initialize dp array of size amount + 1 filled with Infinity, with dp[0] = 0.' },
-      { level: 3, content: 'For each coin: for i from coin to amount: dp[i] = min(dp[i], dp[i - coin] + 1).' },
+      {
+        level: 2,
+        content: 'Initialize dp array of size amount + 1 filled with Infinity, with dp[0] = 0.',
+      },
+      {
+        level: 3,
+        content: 'For each coin: for i from coin to amount: dp[i] = min(dp[i], dp[i - coin] + 1).',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { coins, amount } = input;\n  const dp = new Array(amount + 1).fill(Infinity);\n  dp[0] = 0;\n  for (let i = 1; i <= amount; i++) {\n    for (const c of coins) {\n      if (i - c >= 0) {\n        dp[i] = Math.min(dp[i], dp[i - c] + 1);\n      }\n    }\n  }\n  return dp[amount] === Infinity ? -1 : dp[amount];\n}',
@@ -819,7 +1048,10 @@ export const SEED_PROBLEMS: Problem[] = [
       { input: { nums: [5] }, expected: 5 },
     ],
     hints: [
-      { level: 1, content: 'At each house i, you either rob it (nums[i] + rob(i-2)) or skip it (rob(i-1)).' },
+      {
+        level: 1,
+        content: 'At each house i, you either rob it (nums[i] + rob(i-2)) or skip it (rob(i-1)).',
+      },
       { level: 2, content: 'dp[i] = max(dp[i-1], dp[i-2] + nums[i]).' },
       { level: 3, content: 'Only two previous values are required, giving O(1) space.' },
     ],
@@ -848,7 +1080,11 @@ export const SEED_PROBLEMS: Problem[] = [
     hints: [
       { level: 1, content: 'dp[i] = length of LIS ending at index i.' },
       { level: 2, content: 'For each j < i: if nums[j] < nums[i], dp[i] = max(dp[i], dp[j] + 1).' },
-      { level: 3, content: 'Can be solved in O(n^2) via standard DP, or O(n log n) with patient sorting / binary search.' },
+      {
+        level: 3,
+        content:
+          'Can be solved in O(n^2) via standard DP, or O(n log n) with patient sorting / binary search.',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { nums } = input;\n  if (nums.length === 0) return 0;\n  const dp = new Array(nums.length).fill(1);\n  let maxLen = 1;\n  for (let i = 1; i < nums.length; i++) {\n    for (let j = 0; j < i; j++) {\n      if (nums[j] < nums[i]) {\n        dp[i] = Math.max(dp[i], dp[j] + 1);\n      }\n    }\n    maxLen = Math.max(maxLen, dp[i]);\n  }\n  return maxLen;\n}',
@@ -873,9 +1109,16 @@ export const SEED_PROBLEMS: Problem[] = [
       { input: { word1: 'plasma', word2: 'altruism' }, expected: 6 },
     ],
     hints: [
-      { level: 1, content: '2D DP table where dp[i][j] is the distance between word1[0..i] and word2[0..j].' },
+      {
+        level: 1,
+        content: '2D DP table where dp[i][j] is the distance between word1[0..i] and word2[0..j].',
+      },
       { level: 2, content: 'If chars match, dp[i][j] = dp[i-1][j-1].' },
-      { level: 3, content: 'If chars differ, dp[i][j] = 1 + min(insert: dp[i][j-1], delete: dp[i-1][j], replace: dp[i-1][j-1]).' },
+      {
+        level: 3,
+        content:
+          'If chars differ, dp[i][j] = 1 + min(insert: dp[i][j-1], delete: dp[i-1][j], replace: dp[i-1][j-1]).',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { word1, word2 } = input;\n  const m = word1.length, n = word2.length;\n  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));\n  for (let i = 0; i <= m; i++) dp[i][0] = i;\n  for (let j = 0; j <= n; j++) dp[0][j] = j;\n  for (let i = 1; i <= m; i++) {\n    for (let j = 1; j <= n; j++) {\n      if (word1[i - 1] === word2[j - 1]) dp[i][j] = dp[i - 1][j - 1];\n      else dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);\n    }\n  }\n  return dp[m][n];\n}',
@@ -897,16 +1140,61 @@ export const SEED_PROBLEMS: Problem[] = [
     starterCode:
       'function solve(input) {\n  const { intervals } = input;\n  // Your solution here\n  return [];\n}',
     testCases: [
-      { input: { intervals: [[1, 3], [2, 6], [8, 10], [15, 18]] }, expected: [[1, 6], [8, 10], [15, 18]] },
-      { input: { intervals: [[1, 4], [4, 5]] }, expected: [[1, 5]] },
-      { input: { intervals: [[1, 4], [0, 4]] }, expected: [[0, 4]] },
-      { input: { intervals: [[1, 4], [2, 3]] }, expected: [[1, 4]] },
+      {
+        input: {
+          intervals: [
+            [1, 3],
+            [2, 6],
+            [8, 10],
+            [15, 18],
+          ],
+        },
+        expected: [
+          [1, 6],
+          [8, 10],
+          [15, 18],
+        ],
+      },
+      {
+        input: {
+          intervals: [
+            [1, 4],
+            [4, 5],
+          ],
+        },
+        expected: [[1, 5]],
+      },
+      {
+        input: {
+          intervals: [
+            [1, 4],
+            [0, 4],
+          ],
+        },
+        expected: [[0, 4]],
+      },
+      {
+        input: {
+          intervals: [
+            [1, 4],
+            [2, 3],
+          ],
+        },
+        expected: [[1, 4]],
+      },
       { input: { intervals: [] }, expected: [] },
     ],
     hints: [
       { level: 1, content: 'Sort the intervals by their start time.' },
-      { level: 2, content: 'Iterate through: if current interval overlaps with last merged, merge them.' },
-      { level: 3, content: 'Overlaps when current.start <= lastMerged.end. Merged end is max(lastMerged.end, current.end).' },
+      {
+        level: 2,
+        content: 'Iterate through: if current interval overlaps with last merged, merge them.',
+      },
+      {
+        level: 3,
+        content:
+          'Overlaps when current.start <= lastMerged.end. Merged end is max(lastMerged.end, current.end).',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { intervals } = input;\n  if (intervals.length === 0) return [];\n  intervals.sort((a, b) => a[0] - b[0]);\n  const merged = [intervals[0]];\n  for (let i = 1; i < intervals.length; i++) {\n    const curr = intervals[i];\n    const last = merged[merged.length - 1];\n    if (curr[0] <= last[1]) {\n      last[1] = Math.max(last[1], curr[1]);\n    } else {\n      merged.push(curr);\n    }\n  }\n  return merged;\n}',
@@ -933,7 +1221,11 @@ export const SEED_PROBLEMS: Problem[] = [
     hints: [
       { level: 1, content: 'Dutch National Flag algorithm.' },
       { level: 2, content: 'Maintain three pointers: low, mid, high.' },
-      { level: 3, content: 'If nums[mid] === 0, swap(low, mid), low++, mid++. If nums[mid] === 1, mid++. If nums[mid] === 2, swap(mid, high), high--.' },
+      {
+        level: 3,
+        content:
+          'If nums[mid] === 0, swap(low, mid), low++, mid++. If nums[mid] === 1, mid++. If nums[mid] === 2, swap(mid, high), high--.',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { nums } = input;\n  let low = 0, mid = 0, high = nums.length - 1;\n  while (mid <= high) {\n    if (nums[mid] === 0) {\n      [nums[low], nums[mid]] = [nums[mid], nums[low]];\n      low++; mid++;\n    } else if (nums[mid] === 1) {\n      mid++;\n    } else {\n      [nums[mid], nums[high]] = [nums[high], nums[mid]];\n      high--;\n    }\n  }\n  return nums;\n}',
@@ -960,7 +1252,10 @@ export const SEED_PROBLEMS: Problem[] = [
     hints: [
       { level: 1, content: 'Count element frequencies using a Hash Map.' },
       { level: 2, content: 'Sort the distinct elements by frequency.' },
-      { level: 3, content: 'Alternatively, Bucket Sort achieves O(n) time by indexing frequency arrays.' },
+      {
+        level: 3,
+        content: 'Alternatively, Bucket Sort achieves O(n) time by indexing frequency arrays.',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { nums, k } = input;\n  const count = new Map();\n  for (const n of nums) count.set(n, (count.get(n) || 0) + 1);\n  const sorted = [...count.entries()].sort((a, b) => b[1] - a[1]);\n  return sorted.slice(0, k).map(e => e[0]);\n}',
@@ -1013,7 +1308,10 @@ export const SEED_PROBLEMS: Problem[] = [
     ],
     hints: [
       { level: 1, content: 'Convert integers to strings.' },
-      { level: 2, content: 'Custom sort comparator: compare string concatenations (b + a) vs (a + b).' },
+      {
+        level: 2,
+        content: 'Custom sort comparator: compare string concatenations (b + a) vs (a + b).',
+      },
       { level: 3, content: 'Edge case: if the highest number is "0", return "0".' },
     ],
     solution: {
@@ -1045,7 +1343,10 @@ export const SEED_PROBLEMS: Problem[] = [
     hints: [
       { level: 1, content: 'Divide search space in half at each step with low and high pointers.' },
       { level: 2, content: 'mid = Math.floor((low + high) / 2).' },
-      { level: 3, content: 'If nums[mid] === target return mid; else adjust low = mid + 1 or high = mid - 1.' },
+      {
+        level: 3,
+        content: 'If nums[mid] === target return mid; else adjust low = mid + 1 or high = mid - 1.',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { nums, target } = input;\n  let low = 0, high = nums.length - 1;\n  while (low <= high) {\n    const mid = Math.floor((low + high) / 2);\n    if (nums[mid] === target) return mid;\n    if (nums[mid] < target) low = mid + 1;\n    else high = mid - 1;\n  }\n  return -1;\n}',
@@ -1063,15 +1364,38 @@ export const SEED_PROBLEMS: Problem[] = [
     starterCode:
       'function solve(input) {\n  const { matrix, target } = input;\n  // Your solution here\n  return false;\n}',
     testCases: [
-      { input: { matrix: [[1, 3, 5, 7], [10, 11, 16, 20], [23, 30, 34, 60]], target: 3 }, expected: true },
-      { input: { matrix: [[1, 3, 5, 7], [10, 11, 16, 20], [23, 30, 34, 60]], target: 13 }, expected: false },
+      {
+        input: {
+          matrix: [
+            [1, 3, 5, 7],
+            [10, 11, 16, 20],
+            [23, 30, 34, 60],
+          ],
+          target: 3,
+        },
+        expected: true,
+      },
+      {
+        input: {
+          matrix: [
+            [1, 3, 5, 7],
+            [10, 11, 16, 20],
+            [23, 30, 34, 60],
+          ],
+          target: 13,
+        },
+        expected: false,
+      },
       { input: { matrix: [[1]], target: 1 }, expected: true },
       { input: { matrix: [[1]], target: 2 }, expected: false },
       { input: { matrix: [[1, 3]], target: 3 }, expected: true },
     ],
     hints: [
       { level: 1, content: 'Treat the m x n matrix as a single 1D sorted array of length m * n.' },
-      { level: 2, content: 'Map 1D index mid to 2D coordinates: row = Math.floor(mid / n), col = mid % n.' },
+      {
+        level: 2,
+        content: 'Map 1D index mid to 2D coordinates: row = Math.floor(mid / n), col = mid % n.',
+      },
       { level: 3, content: 'Binary search over 0 to (m * n - 1).' },
     ],
     solution: {
@@ -1098,7 +1422,11 @@ export const SEED_PROBLEMS: Problem[] = [
     ],
     hints: [
       { level: 1, content: 'Compare nums[mid] with nums[high].' },
-      { level: 2, content: 'If nums[mid] > nums[high], the inflection point (minimum) is in the right half: low = mid + 1.' },
+      {
+        level: 2,
+        content:
+          'If nums[mid] > nums[high], the inflection point (minimum) is in the right half: low = mid + 1.',
+      },
       { level: 3, content: 'Else, minimum is at or left of mid: high = mid.' },
     ],
     solution: {
@@ -1124,9 +1452,15 @@ export const SEED_PROBLEMS: Problem[] = [
       { input: { nums: [5, 1, 3], target: 5 }, expected: 0 },
     ],
     hints: [
-      { level: 1, content: 'At least one half (left or right) of the array is always normally sorted.' },
+      {
+        level: 1,
+        content: 'At least one half (left or right) of the array is always normally sorted.',
+      },
       { level: 2, content: 'Check if target lies within the boundaries of the sorted half.' },
-      { level: 3, content: 'If target is within sorted half, search there; otherwise search the other half.' },
+      {
+        level: 3,
+        content: 'If target is within sorted half, search there; otherwise search the other half.',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  const { nums, target } = input;\n  let low = 0, high = nums.length - 1;\n  while (low <= high) {\n    const mid = Math.floor((low + high) / 2);\n    if (nums[mid] === target) return mid;\n    if (nums[low] <= nums[mid]) {\n      if (nums[low] <= target && target < nums[mid]) high = mid - 1;\n      else low = mid + 1;\n    } else {\n      if (nums[mid] < target && target <= nums[high]) low = mid + 1;\n      else high = mid - 1;\n    }\n  }\n  return -1;\n}',
@@ -1151,9 +1485,16 @@ export const SEED_PROBLEMS: Problem[] = [
       { input: { nums1: [2], nums2: [] }, expected: 2.0 },
     ],
     hints: [
-      { level: 1, content: 'Partition both arrays such that left half has (m + n + 1) / 2 elements.' },
+      {
+        level: 1,
+        content: 'Partition both arrays such that left half has (m + n + 1) / 2 elements.',
+      },
       { level: 2, content: 'Binary search the partition index on the smaller array.' },
-      { level: 3, content: 'Check if maxLeft1 <= minRight2 and maxLeft2 <= minRight1. If so, calculate median.' },
+      {
+        level: 3,
+        content:
+          'Check if maxLeft1 <= minRight2 and maxLeft2 <= minRight1. If so, calculate median.',
+      },
     ],
     solution: {
       code: 'function solve(input) {\n  let { nums1, nums2 } = input;\n  if (nums1.length > nums2.length) [nums1, nums2] = [nums2, nums1];\n  const m = nums1.length, n = nums2.length;\n  let low = 0, high = m;\n  while (low <= high) {\n    const i = Math.floor((low + high) / 2);\n    const j = Math.floor((m + n + 1) / 2) - i;\n    const maxL1 = i === 0 ? -Infinity : nums1[i - 1];\n    const minR1 = i === m ? Infinity : nums1[i];\n    const maxL2 = j === 0 ? -Infinity : nums2[j - 1];\n    const minR2 = j === n ? Infinity : nums2[j];\n    if (maxL1 <= minR2 && maxL2 <= minR1) {\n      if ((m + n) % 2 === 1) return Math.max(maxL1, maxL2);\n      return (Math.max(maxL1, maxL2) + Math.min(minR1, minR2)) / 2;\n    } else if (maxL1 > minR2) {\n      high = i - 1;\n    } else {\n      low = i + 1;\n    }\n  }\n  return 0;\n}',

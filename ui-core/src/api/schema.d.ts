@@ -393,7 +393,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Push local (SQLite/CLI) attempts and submissions to server */
+        /** Push a batch of offline client operations (idempotent by opId, max 100) */
         post: operations["syncPush"];
         delete?: never;
         options?: never;
@@ -408,8 +408,25 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Pull server-side problems and submissions to local client */
+        /** Pull this user's operations after a server_seq cursor */
         get: operations["syncPull"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sync/bootstrap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Full snapshot for a new device or after SYNC_CURSOR_EXPIRED */
+        get: operations["syncBootstrap"];
         put?: never;
         post?: never;
         delete?: never;
@@ -552,13 +569,60 @@ export interface components {
             problemId: string;
             problem: components["schemas"]["Problem"];
         };
+        /** @description One client mutation. The server takes the user from the token, not from userId. */
+        SyncOperation: {
+            /** @description Set by the server (pull only); the pull cursor. */
+            serverSeq?: number;
+            /**
+             * Format: uuid
+             * @description Client-generated; makes push idempotent.
+             */
+            opId: string;
+            deviceId: string;
+            userId?: string;
+            /** @enum {string} */
+            entity: "submission" | "attempt" | "user_stats" | "settings" | "tombstone" | "problem";
+            /** @enum {string} */
+            operationType: "INSERT" | "UPDATE" | "DELETE" | "UPSERT";
+            payload: Record<string, never>;
+            /** Format: date-time */
+            clientTimestamp: string;
+            /** @description Hybrid logical clock "<ms>.<counter>.<deviceId>"; last-write-wins for settings. */
+            hlc: string;
+            schemaVersion: number;
+            /** Format: date-time */
+            createdAt?: string;
+        };
         SyncPush: {
-            problemsAttempted: string[];
-            submissions: Record<string, never>[];
+            deviceId: string;
+            clientVersion: string;
+            schemaVersion: number;
+            operations: components["schemas"]["SyncOperation"][];
+        };
+        SyncPushResult: {
+            success: boolean;
+            acknowledgedOpIds: string[];
+            /** @description Already applied earlier (safe retry); also listed in acknowledgedOpIds. */
+            duplicateOpIds: string[];
+            serverSeqWatermark: number;
+            /** Format: date-time */
+            serverTimestamp: string;
         };
         SyncPull: {
-            problems: components["schemas"]["ProblemSummary"][];
-            submissions: components["schemas"]["Submission"][];
+            /** @description Pass it back as ?cursor= for the next page. */
+            cursor: number;
+            hasMore: boolean;
+            operations: components["schemas"]["SyncOperation"][];
+        };
+        SyncBootstrap: {
+            /** @description Start pulling from this cursor after applying the snapshot. */
+            watermarkSeq: number;
+            problems: Record<string, never>[];
+            userSubmissions: Record<string, never>[];
+            userStats: Record<string, never>[];
+            userSettings: Record<string, never>;
+            /** Format: date-time */
+            generatedAt: string;
         };
         FailedJob: {
             id: string;
@@ -1391,16 +1455,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Push accepted */
+            /** @description Operations applied (or already applied) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        accepted: number;
-                        conflicts: Record<string, never>[];
-                    };
+                    "application/json": components["schemas"]["SyncPushResult"];
                 };
             };
             400: components["responses"]["BadRequest"];
@@ -1410,7 +1471,8 @@ export interface operations {
     syncPull: {
         parameters: {
             query?: {
-                since?: string;
+                cursor?: number;
+                limit?: number;
             };
             header?: never;
             path?: never;
@@ -1418,13 +1480,43 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Data to sync down */
+            /** @description One page of operations */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["SyncPull"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description SYNC_CURSOR_EXPIRED, the cursor is older than the 90-day tombstone window; call /sync/bootstrap */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    syncBootstrap: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Snapshot */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncBootstrap"];
                 };
             };
             401: components["responses"]["Unauthorized"];

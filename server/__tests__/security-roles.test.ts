@@ -1,16 +1,21 @@
-import { Pool } from 'pg';
+import type { Pool } from 'pg';
+
+// Separate test database, never the dev one (it inserts audit rows that can't be deleted).
+const DB_URL =
+  process.env.TEST_DATABASE_URL || 'postgresql://postgres@localhost:5432/dsa_portal_test';
 
 describe('Database Security Roles & Audit Immutability', () => {
   let pool: Pool;
+  let closePool: () => Promise<void>;
 
-  beforeAll(() => {
-    pool = new Pool({
-      connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/dsa_portal',
-    });
+  beforeAll(async () => {
+    process.env.DATABASE_URL = DB_URL; // the shared pool reads it at import time
+    ({ pool, closePool } = await import('../src/db/pool'));
+    await (await import('../src/db/migrate')).migrateUp();
   });
 
   afterAll(async () => {
-    await pool.end();
+    await closePool();
   });
 
   it('verifies least-privilege roles exist in PostgreSQL', async () => {
@@ -47,8 +52,31 @@ describe('Database Security Roles & Audit Immutability', () => {
     const logId = insertRes.rows[0].id;
 
     // Attempting to DELETE must throw a security exception
+    await expect(pool.query(`DELETE FROM audit_log WHERE id = $1`, [logId])).rejects.toThrow(
+      /audit_log is append-only/
+    );
+  });
+
+  it('lets a user be deleted: ON DELETE SET NULL may clear actor_id, nothing else (migration 007)', async () => {
+    const tag = `sr${Date.now() % 1e9}`;
+    const users = await pool.query(
+      `INSERT INTO users (username, email, password_hash) VALUES ($1, $2, 'x'), ($3, $4, 'x') RETURNING id`,
+      [`${tag}a`, `${tag}a@test.dev`, `${tag}b`, `${tag}b@test.dev`]
+    );
+    const [a, b] = users.rows.map((r) => r.id);
+    const log = await pool.query(
+      `INSERT INTO audit_log (actor_id, action, entity_type) VALUES ($1, 'TEST_ACTOR', 'User') RETURNING id`,
+      [a]
+    );
+    const logId = log.rows[0].id;
+
+    // Re-attributing a row to someone else is still tampering.
     await expect(
-      pool.query(`DELETE FROM audit_log WHERE id = $1`, [logId])
+      pool.query(`UPDATE audit_log SET actor_id = $1 WHERE id = $2`, [b, logId])
     ).rejects.toThrow(/audit_log is append-only/);
+
+    await pool.query(`DELETE FROM users WHERE id = ANY($1::uuid[])`, [[a, b]]);
+    const after = await pool.query(`SELECT actor_id, action FROM audit_log WHERE id = $1`, [logId]);
+    expect(after.rows[0]).toEqual({ actor_id: null, action: 'TEST_ACTOR' });
   });
 });

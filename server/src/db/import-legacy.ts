@@ -37,7 +37,9 @@ export async function importLegacyProblems(): Promise<{ imported: string[]; skip
           continue;
         }
 
-        console.log(`[Legacy Importer] Ingesting legacy problem: ${validated.title} (${validated.id})`);
+        console.log(
+          `[Legacy Importer] Ingesting legacy problem: ${validated.title} (${validated.id})`
+        );
         await problemRepo.save(validated);
         seenIds.add(validated.id);
         imported.push(validated.id);
@@ -48,7 +50,9 @@ export async function importLegacyProblems(): Promise<{ imported: string[]; skip
     }
   }
 
-  console.log(`[Legacy Importer] Import complete. Imported: ${imported.length}, Skipped: ${skipped.length}`);
+  console.log(
+    `[Legacy Importer] Import complete. Imported: ${imported.length}, Skipped: ${skipped.length}`
+  );
   return { imported, skipped };
 }
 

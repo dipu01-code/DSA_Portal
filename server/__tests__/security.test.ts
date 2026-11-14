@@ -9,7 +9,10 @@ async function setup(opts: AppOptions = {}) {
   const app = buildApp({ logger: false, ...opts });
   await app.ready();
   const token = () => `Bearer ${app.jwt.sign({ sub: randomUUID() })}`;
-  const submit = (authorization: string, extra: { headers?: Record<string, string>; ip?: string; code?: string } = {}) =>
+  const submit = (
+    authorization: string,
+    extra: { headers?: Record<string, string>; ip?: string; code?: string } = {}
+  ) =>
     app.inject({
       method: 'POST',
       url: '/api/v1/submissions',
@@ -33,12 +36,17 @@ describe('RateLimiter', () => {
 describe('rate limits (429 RATE_LIMITED)', () => {
   it('limits requests per IP, with Retry-After and the standard error body', async () => {
     const { app } = await setup({ rateLimit: { perIp: 3 } });
-    const hit = (ip: string) => app.inject({ method: 'GET', url: '/api/v1/health', remoteAddress: ip });
+    const hit = (ip: string) =>
+      app.inject({ method: 'GET', url: '/api/v1/health', remoteAddress: ip });
     for (let i = 0; i < 3; i++) expect((await hit('10.0.0.1')).statusCode).toBe(200);
     const res = await hit('10.0.0.1');
     expect(res.statusCode).toBe(429);
     expect(Number(res.headers['retry-after'])).toBeGreaterThan(0);
-    expect(res.json()).toMatchObject({ error: 'RATE_LIMITED', statusCode: 429, path: '/api/v1/health' });
+    expect(res.json()).toMatchObject({
+      error: 'RATE_LIMITED',
+      statusCode: 429,
+      path: '/api/v1/health',
+    });
     expect((await hit('10.0.0.2')).statusCode).toBe(200); // another IP is unaffected
     await app.close();
   });
@@ -47,7 +55,12 @@ describe('rate limits (429 RATE_LIMITED)', () => {
     const { app, token } = await setup({ rateLimit: { perUser: 2 } });
     const auth = token();
     const me = (ip: string, authorization = auth) =>
-      app.inject({ method: 'GET', url: '/api/v1/submissions', remoteAddress: ip, headers: { authorization } });
+      app.inject({
+        method: 'GET',
+        url: '/api/v1/submissions',
+        remoteAddress: ip,
+        headers: { authorization },
+      });
     expect((await me('10.0.1.1')).statusCode).toBe(200);
     expect((await me('10.0.1.2')).statusCode).toBe(200);
     const res = await me('10.0.1.3');
@@ -68,7 +81,10 @@ describe('execution quotas (429 QUOTA_EXCEEDED)', () => {
 
     const res = await submit(auth);
     expect(res.statusCode).toBe(429);
-    expect(res.json()).toMatchObject({ error: 'QUOTA_EXCEEDED', message: expect.stringMatching(/per minute/) });
+    expect(res.json()).toMatchObject({
+      error: 'QUOTA_EXCEEDED',
+      message: expect.stringMatching(/per minute/),
+    });
     const retry = Number(res.headers['retry-after']);
     expect(retry).toBeGreaterThan(0);
     expect(retry).toBeLessThanOrEqual(60);
@@ -118,8 +134,12 @@ describe('request hygiene', () => {
         url: '/api/v1/problems/random',
         headers: { origin, 'access-control-request-method': 'GET' },
       });
-    expect((await preflight('https://app.example.com')).headers['access-control-allow-origin']).toBe('https://app.example.com');
-    expect((await preflight('https://evil.example.net')).headers['access-control-allow-origin']).toBeUndefined();
+    expect(
+      (await preflight('https://app.example.com')).headers['access-control-allow-origin']
+    ).toBe('https://app.example.com');
+    expect(
+      (await preflight('https://evil.example.net')).headers['access-control-allow-origin']
+    ).toBeUndefined();
   });
 
   it('refuses bodies over the size limit with 413', async () => {
@@ -131,7 +151,10 @@ describe('request hygiene', () => {
   it('rejects code with NUL characters as a validation error, not a 500', async () => {
     const res = await submit(token(), { code: 'function solve() {}\u0000' });
     expect(res.statusCode).toBe(400);
-    expect(res.json()).toMatchObject({ error: 'VALIDATION_ERROR', message: expect.stringMatching(/NUL/) });
+    expect(res.json()).toMatchObject({
+      error: 'VALIDATION_ERROR',
+      message: expect.stringMatching(/NUL/),
+    });
   });
 });
 
@@ -153,7 +176,11 @@ describe('audit log', () => {
         action: 'submission.create',
         entityType: 'submission',
         entityId: res.json().submissionId,
-        newValue: { problemId: 'two-sum', codeSha256: createHash('sha256').update(CODE).digest('hex'), codeLength: CODE.length },
+        newValue: {
+          problemId: 'two-sum',
+          codeSha256: createHash('sha256').update(CODE).digest('hex'),
+          codeLength: CODE.length,
+        },
         ipAddress: '203.0.113.9',
       },
     ]);
@@ -161,7 +188,9 @@ describe('audit log', () => {
   });
 
   it('still accepts the submission when the audit write fails', async () => {
-    const audit = { log: async () => Promise.reject(new Error('db down')) } as unknown as AuditRepository;
+    const audit = {
+      log: async () => Promise.reject(new Error('db down')),
+    } as unknown as AuditRepository;
     const { app, token, submit } = await setup({ audit });
     expect((await submit(token())).statusCode).toBe(202);
     await app.close();
@@ -182,9 +211,11 @@ describe('API docs (Day 10)', () => {
     expect(spec.headers['content-type']).toMatch(/yaml/);
     expect(spec.body).toMatch(/^openapi: 3/);
     // Everything else keeps the strict CSP.
-    expect((await app.inject({ method: 'GET', url: '/api/v1/health' })).headers['content-security-policy']).toBe(
-      "default-src 'none'; frame-ancestors 'none'"
-    );
+    expect(
+      (await app.inject({ method: 'GET', url: '/api/v1/health' })).headers[
+        'content-security-policy'
+      ]
+    ).toBe("default-src 'none'; frame-ancestors 'none'");
     await app.close();
   });
 });

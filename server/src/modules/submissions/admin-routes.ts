@@ -29,7 +29,9 @@ export const queueAdminRoutes: FastifyPluginAsync<{
     let after: { failedAt: string; id: string } | undefined;
     if (cursor) {
       const [failedAt, id] = cursor.split('|');
-      if (!z.string().uuid().safeParse(id).success || Number.isNaN(Date.parse(failedAt))) throw new HttpError(400, 'VALIDATION_ERROR', 'cursor is invalid');
+      if (!z.string().uuid().safeParse(id).success || Number.isNaN(Date.parse(failedAt))) {
+        throw new HttpError(400, 'VALIDATION_ERROR', 'cursor is invalid');
+      }
       after = { failedAt, id };
     }
     const rows = await queue.listFailed(q.limit + 1, after); // one extra row tells us if there is a next page
@@ -37,7 +39,10 @@ export const queueAdminRoutes: FastifyPluginAsync<{
     const last = page[page.length - 1];
     return {
       data: page.map(toApiFailedJob),
-      nextCursor: rows.length > q.limit && last.failedAt ? encodeCursor(`${last.failedAt.toISOString()}|${last.id}`) : null,
+      nextCursor:
+        rows.length > q.limit && last.failedAt
+          ? encodeCursor(`${last.failedAt.toISOString()}|${last.id}`)
+          : null,
     };
   });
 

@@ -57,7 +57,9 @@ export class MetricsService {
     lines.push(`dsa_memory_heap_used_bytes ${mem.heapUsed}`);
 
     // DB Pool Metrics
-    lines.push('# HELP dsa_db_pool_total_connections Total active database connections in the pool.');
+    lines.push(
+      '# HELP dsa_db_pool_total_connections Total active database connections in the pool.'
+    );
     lines.push('# TYPE dsa_db_pool_total_connections gauge');
     lines.push(`dsa_db_pool_total_connections ${pool.totalCount}`);
 
@@ -65,7 +67,9 @@ export class MetricsService {
     lines.push('# TYPE dsa_db_pool_idle_connections gauge');
     lines.push(`dsa_db_pool_idle_connections ${pool.idleCount}`);
 
-    lines.push('# HELP dsa_db_pool_waiting_clients Number of queries queued waiting for a free connection.');
+    lines.push(
+      '# HELP dsa_db_pool_waiting_clients Number of queries queued waiting for a free connection.'
+    );
     lines.push('# TYPE dsa_db_pool_waiting_clients gauge');
     lines.push(`dsa_db_pool_waiting_clients ${pool.waitingCount}`);
 
@@ -77,16 +81,22 @@ export class MetricsService {
     }
 
     // Query Performance Metrics
-    lines.push('# HELP dsa_query_execution_count_total Total execution count of core database queries.');
+    lines.push(
+      '# HELP dsa_query_execution_count_total Total execution count of core database queries.'
+    );
     lines.push('# TYPE dsa_query_execution_count_total counter');
     for (const [query, metric] of this.queryMetrics.entries()) {
       lines.push(`dsa_query_execution_count_total{query="${query}"} ${metric.count}`);
     }
 
-    lines.push('# HELP dsa_query_max_duration_seconds Peak execution duration observed for core queries.');
+    lines.push(
+      '# HELP dsa_query_max_duration_seconds Peak execution duration observed for core queries.'
+    );
     lines.push('# TYPE dsa_query_max_duration_seconds gauge');
     for (const [query, metric] of this.queryMetrics.entries()) {
-      lines.push(`dsa_query_max_duration_seconds{query="${query}"} ${metric.maxDurationSeconds.toFixed(6)}`);
+      lines.push(
+        `dsa_query_max_duration_seconds{query="${query}"} ${metric.maxDurationSeconds.toFixed(6)}`
+      );
     }
 
     return lines.join('\n') + '\n';
