@@ -74,6 +74,8 @@ jobs:
     env:
       NODE_ENV: test
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dsa_portal
+      # DB tests (repositories, queue/full-flow e2e, sync, security roles) use this one; the CI database is throwaway.
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dsa_portal
       REDIS_URL: redis://localhost:6379
       JWT_SECRET: test_jwt_secret_ci_key_12345
 
@@ -101,6 +103,9 @@ jobs:
 
       - name: Run Test Suites
         run: npm test -- --coverage --runInBand
+
+      - name: Run client test suites (ui-core, web, mobile)
+        run: npm test -w ui-core && npm test -w web && npm test -w mobile
 
   docker-build:
     name: Docker Build Verification

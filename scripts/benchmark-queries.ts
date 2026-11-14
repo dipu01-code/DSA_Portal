@@ -310,7 +310,9 @@ if (require.main === module) {
     if (fs.existsSync(outputFilePath)) {
       try {
         existingData = JSON.parse(fs.readFileSync(outputFilePath, 'utf8'));
-      } catch {}
+      } catch {
+        // no previous results yet: start a fresh file
+      }
     }
 
     existingData[mode] = {

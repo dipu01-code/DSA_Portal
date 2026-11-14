@@ -58,7 +58,9 @@ export async function runLoadSeeder(): Promise<{
 }> {
   const startTime = Date.now();
   console.log(`[Seed-Load] Starting realistic load generation...`);
-  console.log(`[Seed-Load] Targets: ~${TARGET_USERS.toLocaleString()} users, ~${TARGET_SUBMISSIONS.toLocaleString()} submissions`);
+  console.log(
+    `[Seed-Load] Targets: ~${TARGET_USERS.toLocaleString()} users, ~${TARGET_SUBMISSIONS.toLocaleString()} submissions`
+  );
 
   const client = await pool.connect();
 
@@ -195,7 +197,8 @@ export async function runLoadSeeder(): Promise<{
       let passedTests = 0;
 
       if (status === 'judged') {
-        const passProb = prob.difficulty === 'Easy' ? 0.72 : prob.difficulty === 'Medium' ? 0.45 : 0.22;
+        const passProb =
+          prob.difficulty === 'Easy' ? 0.72 : prob.difficulty === 'Medium' ? 0.45 : 0.22;
         if (random() < passProb) {
           passedTests = totalTests;
         } else {
@@ -291,7 +294,9 @@ export async function runLoadSeeder(): Promise<{
         [cIds, cUsers, cProbs, cCodes, cStatus, cPassed, cTotal, cResults, cCreated, cJudged]
       );
       if ((i + BATCH_SIZE) % 20000 === 0 || i + BATCH_SIZE >= TARGET_SUBMISSIONS) {
-        console.log(`[Seed-Load] Inserted ${Math.min(i + BATCH_SIZE, TARGET_SUBMISSIONS)} submissions...`);
+        console.log(
+          `[Seed-Load] Inserted ${Math.min(i + BATCH_SIZE, TARGET_SUBMISSIONS)} submissions...`
+        );
       }
     }
 

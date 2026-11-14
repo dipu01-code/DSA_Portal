@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -19,9 +17,8 @@ services:
           memory: 512M
     volumes:
       - pg_prod_data:/var/lib/postgresql/data
-      - ../server/src/db/migrations/001_initial_schema.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-dsa_portal}"]
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-dsa_portal}']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -42,10 +39,27 @@ services:
     volumes:
       - redis_prod_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_secure_pwd}", "ping"]
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD:-redis_secure_pwd}', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - dsa_internal
+
+  # One-shot: applies every pending migration (001..latest), then exits; API and worker wait for it.
+  migrate:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.server
+    container_name: dsa_portal_migrate_prod
+    restart: 'no'
+    command: ['node', 'server/dist/db/migrate.js', 'up']
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres_secure_pwd}@postgres:5432/${POSTGRES_DB:-dsa_portal}
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - dsa_internal
 
@@ -61,15 +75,15 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres_secure_pwd}@postgres:5432/${POSTGRES_DB:-dsa_portal}
       REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secure_pwd}@redis:6379
       JWT_SECRET: ${JWT_SECRET:-super_secret_jwt_key_production_change_me}
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost}
     deploy:
       resources:
         limits:
           cpus: '1.5'
           memory: 1024M
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     networks:
@@ -91,24 +105,26 @@ services:
           cpus: '2.0'
           memory: 2048M
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     networks:
       - dsa_internal
 
   nginx:
-    image: nginx:1.25-alpine
+    image: nginx:1.27-alpine
     container_name: dsa_portal_nginx_prod
     restart: always
     ports:
-      - "${PORT_HTTP:-80}:80"
-      - "${PORT_HTTPS:-443}:443"
+      - '${PORT_HTTP:-80}:80'
+      - '${PORT_HTTPS:-443}:443'
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    # nginx resolves "server" once at startup, so start it only after the API is healthy.
     depends_on:
-      - server
+      server:
+        condition: service_healthy
     networks:
       - dsa_internal
       - dsa_public

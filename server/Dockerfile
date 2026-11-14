@@ -39,7 +39,14 @@ COPY server/package.json ./server/
 RUN npm ci --omit=dev && npm cache clean --force
 
 COPY --from=builder /app/core/dist ./core/dist
+# core reads its problem bank from core/problems at import time.
+COPY --from=builder /app/core/problems ./core/problems
 COPY --from=builder /app/server/dist ./server/dist
+# tsc does not copy .sql files; the migrate service runs server/dist/db/migrate.js against these.
+COPY --from=builder /app/server/src/db/migrations ./server/dist/db/migrations
+
+# Served at /docs and /docs/openapi.yaml (app.ts looks for ../../docs/openapi.yaml).
+COPY docs/openapi.yaml ./docs/openapi.yaml
 
 USER node
 

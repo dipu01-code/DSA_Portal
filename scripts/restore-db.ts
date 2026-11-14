@@ -1,10 +1,10 @@
-import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
 import { Pool } from 'pg';
 import { BackupService, BackupManifest } from './backup-service';
 
-const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/dsa_portal';
+const DATABASE_URL =
+  process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/dsa_portal';
 const BACKUP_DIR = process.env.BACKUP_DIR || path.resolve(__dirname, '../backups');
 
 async function runRestore() {
@@ -21,7 +21,9 @@ async function runRestore() {
   let manifest: BackupManifest | undefined;
 
   if (targetFileName) {
-    manifest = backups.find((b) => b.fileName === targetFileName || b.fileName.includes(targetFileName));
+    manifest = backups.find(
+      (b) => b.fileName === targetFileName || b.fileName.includes(targetFileName)
+    );
   } else {
     manifest = backups[0]; // latest
   }
@@ -48,12 +50,9 @@ async function runRestore() {
 
   // 2. Perform restoration
   console.log(`[Restore] Restoring database from archive...`);
-  try {
-    const cmd = `gunzip -c "${filePath}" | psql "${DATABASE_URL}"`;
-    execSync(cmd, { stdio: 'inherit', shell: '/bin/bash' });
-  } catch (err) {
-    console.warn(`[Restore] Direct psql restore completed with warnings or notices.`);
-  }
+  // One transaction + stop on the first error: a failed restore rolls back instead of leaving a half-dropped DB.
+  const cmd = `set -o pipefail; gunzip -c "${filePath}" | psql -q -v ON_ERROR_STOP=1 --single-transaction "${DATABASE_URL}"`;
+  execSync(cmd, { stdio: 'inherit', shell: '/bin/bash' });
 
   // 3. Post-restore smoke validation
   console.log(`[Restore] Running post-restore smoke validation...`);

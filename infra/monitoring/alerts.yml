@@ -8,8 +8,8 @@ groups:
           severity: critical
           tier: database
         annotations:
-          summary: "PostgreSQL Connection Pool Saturation"
-          description: "There are {{ $value }} queries queued waiting for connection slots in the PostgreSQL pool for > 1 minute."
+          summary: 'PostgreSQL Connection Pool Saturation'
+          description: 'There are {{ $value }} queries queued waiting for connection slots in the PostgreSQL pool for > 1 minute.'
 
       - alert: DatabaseDown
         expr: dsa_uptime_seconds > 0 and (probe_success == 0 or dsa_db_pool_total_connections == 0)
@@ -18,8 +18,8 @@ groups:
           severity: disaster
           tier: database
         annotations:
-          summary: "Database Outage Detected"
-          description: "Database readiness probe /health/ready is failing. Application cannot communicate with PostgreSQL."
+          summary: 'Database Outage Detected'
+          description: 'Database readiness probe /health/ready is failing. Application cannot communicate with PostgreSQL.'
 
       - alert: HighQueryLatency
         expr: dsa_query_max_duration_seconds > 0.250
@@ -28,8 +28,8 @@ groups:
           severity: warning
           tier: backend
         annotations:
-          summary: "Elevated Query Execution Latency"
-          description: "Core query execution latency exceeded 250ms on {{ $labels.query }}."
+          summary: 'Elevated Query Execution Latency'
+          description: 'Core query execution latency exceeded 250ms on {{ $labels.query }}.'
 
       - alert: ExcessiveSyncConflicts
         expr: rate(dsa_sync_ops_total{status="conflict"}[5m]) > 10
@@ -38,5 +38,5 @@ groups:
           severity: warning
           tier: sync
         annotations:
-          summary: "High Sync Conflict Frequency"
-          description: "High rate of sync conflict resolution triggered (> 10 conflicts/sec over 5 minutes)."
+          summary: 'High Sync Conflict Frequency'
+          description: 'High rate of sync conflict resolution triggered (> 10 conflicts/sec over 5 minutes).'

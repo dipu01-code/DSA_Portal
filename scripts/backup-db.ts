@@ -4,7 +4,8 @@ import { execSync } from 'child_process';
 import { Pool } from 'pg';
 import { BackupService } from './backup-service';
 
-const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/dsa_portal';
+const DATABASE_URL =
+  process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/dsa_portal';
 const BACKUP_DIR = process.env.BACKUP_DIR || path.resolve(__dirname, '../backups');
 const RETENTION_DAYS = parseInt(process.env.BACKUP_RETENTION_DAYS || '7', 10);
 
@@ -18,10 +19,17 @@ async function runBackup() {
 
   // Query table counts directly via PG pool
   const pool = new Pool({ connectionString: DATABASE_URL });
-  let tableCounts: Record<string, number> = {};
+  const tableCounts: Record<string, number> = {};
 
   try {
-    const tables = ['users', 'problems', 'test_cases', 'submissions', 'user_problem_stats', 'sync_op_log'];
+    const tables = [
+      'users',
+      'problems',
+      'test_cases',
+      'submissions',
+      'user_problem_stats',
+      'sync_op_log',
+    ];
     for (const table of tables) {
       try {
         const res = await pool.query(`SELECT COUNT(*)::int AS count FROM ${table}`);
@@ -34,13 +42,13 @@ async function runBackup() {
     await pool.end();
   }
 
-  // Execute pg_dump with gzip compression if available, fallback to pure sql export
+  // pipefail: a failing pg_dump must fail the backup, not leave a valid-looking empty .gz behind.
   try {
-    const cmd = `pg_dump "${DATABASE_URL}" --clean --if-exists --no-owner --no-privileges | gzip > "${filePath}"`;
+    const cmd = `set -o pipefail; pg_dump "${DATABASE_URL}" --clean --if-exists --no-owner --no-privileges | gzip > "${filePath}"`;
     execSync(cmd, { stdio: 'inherit', shell: '/bin/bash' });
   } catch (err) {
-    console.warn(`[Backup] pg_dump failed or not in PATH, generating schema/data dump fallback...`);
-    fs.writeFileSync(filePath, `-- Fallback snapshot created at ${new Date().toISOString()}\n-- Table counts: ${JSON.stringify(tableCounts)}\n`);
+    fs.rmSync(filePath, { force: true });
+    throw err;
   }
 
   const manifest = backupService.createManifest({

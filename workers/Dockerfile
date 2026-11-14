@@ -18,9 +18,12 @@ RUN npm ci
 
 COPY tsconfig.json ./
 COPY core/ ./core/
+COPY server/ ./server/
 COPY workers/ ./workers/
 
+# The worker imports the server's PostgreSQL repositories (server/dist).
 RUN npm run build -w core
+RUN npm run build -w server
 RUN npm run build -w workers
 
 # Stage 2: Production runner
@@ -34,13 +37,18 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY core/package.json ./core/
 COPY workers/package.json ./workers/
+COPY server/package.json ./server/
 
 RUN npm ci --omit=dev && npm cache clean --force
 
 COPY --from=builder /app/core/dist ./core/dist
+# core reads its problem bank from core/problems at import time.
+COPY --from=builder /app/core/problems ./core/problems
+COPY --from=builder /app/server/dist ./server/dist
 COPY --from=builder /app/workers/dist ./workers/dist
 
 USER node
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
-CMD ["node", "workers/dist/index.js"]
+# main.js runs the judging loop; index.js is only the library entry.
+CMD ["node", "workers/dist/main.js"]
