@@ -43,7 +43,9 @@ export async function judgeSubmission(
     submission.status = 'failed';
   }
   submission.judgedAt = new Date();
-  if (ownsJob && !(await ownsJob())) throw new LeaseLostError(`Lease on ${id} lost; result dropped`);
+  if (ownsJob && !(await ownsJob())) {
+    throw new LeaseLostError(`Lease on ${id} lost; result dropped`);
+  }
   await deps.submissions.save(submission);
   if (submission.status === 'judged') await deps.stats.onSubmissionJudged(submission);
   return submission;

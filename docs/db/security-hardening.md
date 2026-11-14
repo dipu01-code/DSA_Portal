@@ -2,12 +2,12 @@
 
 ## 1. Role-Based Access Control (RBAC) Matrix
 
-| Database Role | Intended Consumer | Schema Permissions | Table Permissions | Rationale |
-| :--- | :--- | :--- | :--- | :--- |
-| `postgres` | Database Administrator / Migrations | `ALL` | `ALL` | Schema migrations, index creations, VACUUM ANALYZE. |
-| `dsa_app` | Fastify REST API (`server`) | `USAGE` | `SELECT, INSERT, UPDATE, DELETE` on all tables; `USAGE, SELECT` on sequences; `EXECUTE` on functions | Full application data lifecycle without DDL or database drop powers. |
-| `dsa_worker` | BullMQ Submission Workers (`workers`) | `USAGE` | `SELECT` on problems/test_cases/solutions; `SELECT, UPDATE` on submissions; `INSERT, UPDATE` on stats | Sandboxed worker can only judge submissions; cannot modify problems or delete users. |
-| `dsa_readonly` | Backup automation, Prometheus metrics, Analysts | `USAGE` | `SELECT` only on all tables | Zero write access; eliminates accidental deletions during reporting or dumps. |
+| Database Role  | Intended Consumer                               | Schema Permissions | Table Permissions                                                                                     | Rationale                                                                            |
+| :------------- | :---------------------------------------------- | :----------------- | :---------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------- |
+| `postgres`     | Database Administrator / Migrations             | `ALL`              | `ALL`                                                                                                 | Schema migrations, index creations, VACUUM ANALYZE.                                  |
+| `dsa_app`      | Fastify REST API (`server`)                     | `USAGE`            | `SELECT, INSERT, UPDATE, DELETE` on all tables; `USAGE, SELECT` on sequences; `EXECUTE` on functions  | Full application data lifecycle without DDL or database drop powers.                 |
+| `dsa_worker`   | BullMQ Submission Workers (`workers`)           | `USAGE`            | `SELECT` on problems/test_cases/solutions; `SELECT, UPDATE` on submissions; `INSERT, UPDATE` on stats | Sandboxed worker can only judge submissions; cannot modify problems or delete users. |
+| `dsa_readonly` | Backup automation, Prometheus metrics, Analysts | `USAGE`            | `SELECT` only on all tables                                                                           | Zero write access; eliminates accidental deletions during reporting or dumps.        |
 
 ---
 

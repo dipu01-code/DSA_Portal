@@ -19,7 +19,16 @@ function fakeNetwork(online = true) {
 }
 
 const judged = (id: string, passed: number, total = 2): Submission =>
-  ({ id, problemId: 'p', userId: 'u', status: 'judged', passed, total, createdAt: '', judgedAt: '' }) as Submission;
+  ({
+    id,
+    problemId: 'p',
+    userId: 'u',
+    status: 'judged',
+    passed,
+    total,
+    createdAt: '',
+    judgedAt: '',
+  }) as Submission;
 
 /** A server that is down while `net` is offline and judges `passed` tests otherwise. */
 function fakeApi(net: { isOnline(): boolean }, passed = 2) {
@@ -43,12 +52,21 @@ const setup = (o: { online?: boolean; passed?: number; user?: string | null } = 
   const api = fakeApi(net, o.passed);
   const onSynced = vi.fn();
   let user = o.user === undefined ? 'u' : o.user;
-  const sync = createSyncStore(api, { network: net, currentUser: () => user, onSynced, pollMs: 0, sleep: async () => {} });
+  const sync = createSyncStore(api, {
+    network: net,
+    currentUser: () => user,
+    onSynced,
+    pollMs: 0,
+    sleep: async () => {},
+  });
   return { net, api, sync, onSynced, signIn: (u: string) => (user = u) };
 };
 
 /** Resolves when the store reaches a state matching `done`. */
-const until = <T,>(store: { getState(): T; subscribe(l: (s: T) => void): () => void }, done: (s: T) => boolean) =>
+const until = <T>(
+  store: { getState(): T; subscribe(l: (s: T) => void): () => void },
+  done: (s: T) => boolean
+) =>
   new Promise<T>((resolve) => {
     if (done(store.getState())) return resolve(store.getState());
     const off = store.subscribe((s) => done(s) && (off(), resolve(s)));
@@ -91,7 +109,10 @@ describe('sync outbox', () => {
     sync.getState().enqueue({ problemId: 'p', code: 'c' });
     net.set(true);
     const s = await until(sync, (x) => x.queue[1].state === 'synced');
-    expect(s.queue[0]).toMatchObject({ state: 'rejected', message: expect.stringMatching(/Problem not found/) });
+    expect(s.queue[0]).toMatchObject({
+      state: 'rejected',
+      message: expect.stringMatching(/Problem not found/),
+    });
     sync.getState().clearFinished();
     expect(sync.getState().queue).toEqual([]);
   });
@@ -108,7 +129,7 @@ describe('sync outbox', () => {
     expect(net.isOnline()).toBe(true);
   });
 
-  it('waits for a session, and never replays another user\'s queue', async () => {
+  it("waits for a session, and never replays another user's queue", async () => {
     const { net, sync, signIn } = setup({ user: null });
     sync.getState().enqueue({ problemId: 'p', code: 'guest' }); // desktop offline guest: userId null
     net.set(true);
@@ -129,9 +150,15 @@ describe('sync outbox', () => {
 
   it('persists the queue', async () => {
     const mem = new Map<string, string>();
-    const storage = { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, v), removeItem: (k: string) => void mem.delete(k) };
+    const storage = {
+      getItem: (k: string) => mem.get(k) ?? null,
+      setItem: (k: string, v: string) => void mem.set(k, v),
+      removeItem: (k: string) => void mem.delete(k),
+    };
     const api = fakeApi({ isOnline: () => false });
-    createSyncStore(api, { storage, currentUser: () => 'u' }).getState().enqueue({ problemId: 'p', code: 'c' });
+    createSyncStore(api, { storage, currentUser: () => 'u' })
+      .getState()
+      .enqueue({ problemId: 'p', code: 'c' });
     const again = createSyncStore(api, { storage, currentUser: () => 'u' });
     expect(again.getState().queue).toHaveLength(1);
   });
@@ -140,11 +167,30 @@ describe('sync outbox', () => {
 describe('sync wording', () => {
   it('summarises status and items', async () => {
     const { syncSummary, describeQueued } = await import('./sync');
-    const q = { key: 'k', problemId: 'p', code: '', userId: 'u', queuedAt: '', state: 'pending' as const };
+    const q = {
+      key: 'k',
+      problemId: 'p',
+      code: '',
+      userId: 'u',
+      queuedAt: '',
+      state: 'pending' as const,
+    };
     expect(syncSummary({ status: 'offline', queue: [q] })).toBe('Offline · 1 queued');
     expect(syncSummary({ status: 'syncing', queue: [q] })).toBe('Syncing 1…');
     expect(syncSummary({ status: 'online', queue: [] })).toBe('Online');
-    expect(describeQueued({ ...q, state: 'synced', server: { submissionId: 's', status: 'judged', passed: 2, total: 2 } })).toBe('Synced · Accepted 2/2');
-    expect(describeQueued({ ...q, state: 'conflict', server: { submissionId: 's', status: 'judged', passed: 1, total: 2 } })).toBe('Conflict · Wrong answer 1/2');
+    expect(
+      describeQueued({
+        ...q,
+        state: 'synced',
+        server: { submissionId: 's', status: 'judged', passed: 2, total: 2 },
+      })
+    ).toBe('Synced · Accepted 2/2');
+    expect(
+      describeQueued({
+        ...q,
+        state: 'conflict',
+        server: { submissionId: 's', status: 'judged', passed: 1, total: 2 },
+      })
+    ).toBe('Conflict · Wrong answer 1/2');
   });
 });

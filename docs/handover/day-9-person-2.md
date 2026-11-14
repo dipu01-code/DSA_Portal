@@ -1,7 +1,9 @@
 # Handover — Day 9, Person 2
 
 ## What was built
+
 Day 9 delivers complete production health probing, Prometheus metrics instrumentation, alerting rules, and incident runbooks:
+
 1. **Health Service & Dual-Tier Probes**:
    - `server/src/health/health.service.ts` & `server/src/health/health.controller.ts`
    - `GET /health/live`: Fast process liveness check (200 OK) for container orchestrators.
@@ -24,6 +26,7 @@ Day 9 delivers complete production health probing, Prometheus metrics instrument
 ---
 
 ## Endpoints for Persons 1 & 3
+
 - `GET /health/live` — Returns `{ status: 'ok', uptimeSeconds: 124 }`
 - `GET /health/ready` — Returns 200 `{ status: 'ok', checks: { postgres: { status: 'ok', latencyMs: 2 }, pool: { totalCount: 4, idleCount: 4, waitingCount: 0 } } }` (or 503 if PostgreSQL is down)
 - `GET /metrics` — Prometheus metrics endpoint.
@@ -33,6 +36,7 @@ Day 9 delivers complete production health probing, Prometheus metrics instrument
 ## Viva Defense (Design Decisions & Trade-offs)
 
 > **Viva Defense — Day 9 Architectural Rationale:**
+>
 > 1. **Liveness vs. Readiness Probe Separation**: Conflating liveness with readiness causes catastrophic cascading restarts during transient database blips. A failed readiness probe stops routing incoming HTTP traffic to the pod while keeping the Node.js process alive; a failed liveness probe forcibly kills the process.
 > 2. **Tracking `waitingCount` Over `totalCount`**: In a pooled architecture, having 20 active connections is normal under heavy traffic. The true indicator of pool saturation and user-facing queuing is `waitingCount > 0`, which directly quantifies request starvation.
 > 3. **Pull-Based Prometheus Metrics Model**: Pull-based scraping prevents application servers from being overwhelmed by metric pushing loops and decouples the monitoring infrastructure from the application lifecycle.

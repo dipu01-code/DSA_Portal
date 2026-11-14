@@ -1,6 +1,7 @@
 # Handover — Day 6, Person 2
 
 ## What was built
+
 Day 6 — Complete database performance optimization across 100,000+ records: realistic load generation seeder, EXPLAIN (ANALYZE, BUFFERS) benchmarking suite, composite/partial/covering indexes, concurrent materialized view for the global leaderboard, keyset pagination engine, and connection pool tuning.
 
 All work committed to branch `person-2/day-6`.
@@ -11,13 +12,13 @@ All work committed to branch `person-2/day-6`.
 
 Full before/after analysis is documented in [`/docs/db/optimization-report.md`](file:///Users/arsh1607/Documents/projects/DSA_CLI/DSA_Portal/docs/db/optimization-report.md):
 
-| Target Area | Before Optimization | After Optimization | Measurable Improvement |
-| :--- | :--- | :--- | :--- |
-| **Global Leaderboard (Q4)** | 220.64 ms (3,539 buffers, Seq Scan) | **0.02 ms (3 buffers, Index Scan)** | **~6,900x faster** |
-| **Recent Judged Activity Feed (Q9)** | 15.75 ms (3,974 buffers, Seq Scan) | **0.18 ms (234 buffers, Partial Index)** | **~40x faster** |
-| **Problem Solved Check (Q10)** | 0.08 ms (290 buffers, Heap Scan) | **0.01 ms (4 buffers, Partial Index)** | **98.6% I/O reduction** |
-| **Deep Pagination (Page 2,500)** | 25.59 ms (OFFSET 50,000) | **0.02 ms (Keyset Cursor Seek)** | **1,112x faster** |
-| **User Stats Lookups (Q5, Q6)** | Bitmap Heap Scan (23 & 20 buffers) | **Index-Only Scan (8 & 5 buffers)** | **Zero table heap access** |
+| Target Area                          | Before Optimization                 | After Optimization                       | Measurable Improvement     |
+| :----------------------------------- | :---------------------------------- | :--------------------------------------- | :------------------------- |
+| **Global Leaderboard (Q4)**          | 220.64 ms (3,539 buffers, Seq Scan) | **0.02 ms (3 buffers, Index Scan)**      | **~6,900x faster**         |
+| **Recent Judged Activity Feed (Q9)** | 15.75 ms (3,974 buffers, Seq Scan)  | **0.18 ms (234 buffers, Partial Index)** | **~40x faster**            |
+| **Problem Solved Check (Q10)**       | 0.08 ms (290 buffers, Heap Scan)    | **0.01 ms (4 buffers, Partial Index)**   | **98.6% I/O reduction**    |
+| **Deep Pagination (Page 2,500)**     | 25.59 ms (OFFSET 50,000)            | **0.02 ms (Keyset Cursor Seek)**         | **1,112x faster**          |
+| **User Stats Lookups (Q5, Q6)**      | Bitmap Heap Scan (23 & 20 buffers)  | **Index-Only Scan (8 & 5 buffers)**      | **Zero table heap access** |
 
 ---
 
@@ -51,17 +52,22 @@ Full before/after analysis is documented in [`/docs/db/optimization-report.md`](
 ## 4. Instructions for Person 1 (Backend & Worker)
 
 ### 1. Leaderboard Endpoint (`GET /api/v1/leaderboard`)
+
 Instead of aggregating 100k submissions live, query `mv_leaderboard`:
+
 ```sql
 SELECT user_id, username, solved_count, total_submissions, score, last_submission_at, rank
 FROM mv_leaderboard
 ORDER BY rank ASC
 LIMIT 50;
 ```
+
 Execution time is **0.02 ms flat**.
 
 ### 2. Leaderboard Background Refresh Worker (BullMQ / Cron)
+
 Schedule a background worker in `/workers` to refresh the leaderboard concurrently every 60 seconds:
+
 ```typescript
 import { pool } from '@dsa-portal/server/src/db/pool';
 
@@ -69,10 +75,13 @@ export async function refreshLeaderboardTask() {
   await pool.query('SELECT refresh_leaderboard(true);');
 }
 ```
+
 `REFRESH MATERIALIZED VIEW CONCURRENTLY` runs in the background and **never locks active read queries**.
 
 ### 3. Keyset Pagination Helper in REST Routes
+
 Import from `@dsa-portal/core`:
+
 ```typescript
 import { decodeCursor, paginateKeyset, buildKeysetClause } from '@dsa-portal/core';
 
@@ -84,7 +93,12 @@ app.get('/api/v1/submissions', async (req) => {
   let params = [limit + 1];
 
   if (decoded) {
-    const keyset = buildKeysetClause('DESC', ['created_at', 'id'], [decoded.createdAt, decoded.id], 2);
+    const keyset = buildKeysetClause(
+      'DESC',
+      ['created_at', 'id'],
+      [decoded.createdAt, decoded.id],
+      2
+    );
     whereClause = `WHERE ${keyset.sql}`;
     params.push(...keyset.params);
   }
@@ -109,11 +123,13 @@ app.get('/api/v1/submissions', async (req) => {
 ## 5. Instructions for Person 3 (Clients & Frontend)
 
 ### 1. Infinite Scroll & Keyset Pagination
+
 - In Web, Desktop, and Mobile feed components, pass the `nextCursor` received in the page response into the next request:
   `GET /api/v1/submissions?cursor=${nextCursor}&limit=20`.
 - Deep pages (e.g. page 2,500) will load with **zero lag (< 1ms)** instead of timing out at 25+ ms.
 
 ### 2. Fast Leaderboard Widget
+
 - The leaderboard response now includes `rank` and pre-computed `score` points (Easy: 10 pts, Medium: 25 pts, Hard: 50 pts).
 
 ---

@@ -8,7 +8,8 @@ import type { SecureStorage } from '@dsa-portal/ui-core';
  * Linux). If the OS offers no encryption, secrets are kept in memory only: never written in plain text.
  */
 export function safeStorageStore(): SecureStorage {
-  const file = (key: string) => path.join(app.getPath('userData'), `${key.replace(/[^\w.-]/g, '_')}.bin`);
+  const file = (key: string) =>
+    path.join(app.getPath('userData'), `${key.replace(/[^\w.-]/g, '_')}.bin`);
   const memory = new Map<string, string>();
   const encrypted = () => safeStorage.isEncryptionAvailable();
   return {

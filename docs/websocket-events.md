@@ -27,13 +27,13 @@ socket.on('connect_error', (err) => {
 
 All payloads are small on purpose (PostgreSQL NOTIFY caps them at 8 KB). Fetch details over REST.
 
-| Event | Sent to | Payload | When |
-|---|---|---|---|
-| `submission:queued` | submitter | `{ submissionId, problemId, status: "queued", passed: 0, total: 0 }` | Submission saved (also after an automatic retry or an admin requeue) |
-| `submission:running` | submitter | `{ submissionId, problemId, status: "running", passed: 0, total: 0 }` | A worker picked it up |
+| Event                 | Sent to   | Payload                                                                    | When                                                                                                                           |
+| --------------------- | --------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `submission:queued`   | submitter | `{ submissionId, problemId, status: "queued", passed: 0, total: 0 }`       | Submission saved (also after an automatic retry or an admin requeue)                                                           |
+| `submission:running`  | submitter | `{ submissionId, problemId, status: "running", passed: 0, total: 0 }`      | A worker picked it up                                                                                                          |
 | `submission:finished` | submitter | `{ submissionId, problemId, status: "judged" \| "failed", passed, total }` | Result saved. `failed` = system failure after retries, not a wrong answer. Fetch per-test results with `GET /submissions/{id}` |
-| `leaderboard:updated` | everyone | `{ userId, problemId }` | A submission passed every test. Refetch `GET /leaderboard` (debounce it: this fires often when many people practise) |
-| `daily:new` | everyone | `{ date: "YYYY-MM-DD", problemId }` | A new UTC day's challenge was created (just after 00:00 UTC). Refetch `GET /daily-challenge` |
+| `leaderboard:updated` | everyone  | `{ userId, problemId }`                                                    | A submission passed every test. Refetch `GET /leaderboard` (debounce it: this fires often when many people practise)           |
+| `daily:new`           | everyone  | `{ date: "YYYY-MM-DD", problemId }`                                        | A new UTC day's challenge was created (just after 00:00 UTC). Refetch `GET /daily-challenge`                                   |
 
 `problemId` is the problem's slug, the same id as in `/problems/{id}`.
 

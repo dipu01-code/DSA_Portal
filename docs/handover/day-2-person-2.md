@@ -1,6 +1,7 @@
 # Handover — Day 2, Person 2
 
 ## What was built
+
 Day 2 — Migrations, seeds, repository layer, and legacy CLI importer for the DSA Practice Platform.
 
 All work committed to branch `person-2/day-2`.
@@ -62,6 +63,7 @@ npm run db:seed
 ```
 
 ### Additional Available Database Scripts:
+
 ```bash
 npm run db:reset          # Tears down DB, runs up migrations, and seeds
 npm run db:migrate:down   # Rolls back all applied migrations

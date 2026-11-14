@@ -38,7 +38,11 @@ function startWorker(name: string, metricsPort?: number) {
   return { name, child, log: () => log };
 }
 
-async function waitFor<T>(what: string, fn: () => Promise<T | undefined>, timeoutMs: number): Promise<T> {
+async function waitFor<T>(
+  what: string,
+  fn: () => Promise<T | undefined>,
+  timeoutMs: number
+): Promise<T> {
   for (const end = Date.now() + timeoutMs; Date.now() < end; await sleep(50)) {
     const v = await fn();
     if (v !== undefined) return v;
@@ -55,7 +59,7 @@ async function main() {
   const { buildApp } = await import('../../server/src/app');
   const { PostgresSubmissionQueue } = await import('../../server/src/modules/submissions/queue');
   // The seeded two-sum (5 tests), as in a real database; core's bundled copy has only 3.
-    const { SEED_PROBLEMS: PROBLEMS } = await import('../../server/src/db/seeds/problems-data');
+  const { SEED_PROBLEMS: PROBLEMS } = await import('../../server/src/db/seeds/problems-data');
 
   const workers: ChildProcess[] = [];
   let app: ReturnType<typeof buildApp> | undefined;
@@ -67,38 +71,69 @@ async function main() {
       [USER_ID]
     );
     const problems = new repos.PostgresProblemRepository();
-    if (!(await problems.findById('two-sum'))) await problems.save(PROBLEMS.find((p) => p.id === 'two-sum')!);
+    if (!(await problems.findById('two-sum'))) {
+      await problems.save(PROBLEMS.find((p) => p.id === 'two-sum')!);
+    }
 
-    app = buildApp({ logger: false, problems, submissions: new repos.PostgresSubmissionRepository(), queue: new PostgresSubmissionQueue(), leaderboard: new (await import('../../server/src/modules/leaderboard/store')).PostgresLeaderboardStore(),
-      quota: { perMinute: 1e6, perDay: 1e6 }, rateLimit: { perIp: 1e6, perUser: 1e6 } }); // tests the queue, not the Day 8 limits
+    app = buildApp({
+      logger: false,
+      problems,
+      submissions: new repos.PostgresSubmissionRepository(),
+      queue: new PostgresSubmissionQueue(),
+      leaderboard: new (
+        await import('../../server/src/modules/leaderboard/store')
+      ).PostgresLeaderboardStore(),
+      quota: { perMinute: 1e6, perDay: 1e6 },
+      rateLimit: { perIp: 1e6, perUser: 1e6 },
+    }); // tests the queue, not the Day 8 limits
     await app.ready();
     const auth = { authorization: `Bearer ${app.jwt.sign({ sub: USER_ID })}` };
 
     const a = startWorker('A');
     workers.push(a.child);
-    await waitFor('worker A to start', async () => (a.log().includes('started') ? true : undefined), 10000);
+    await waitFor(
+      'worker A to start',
+      async () => (a.log().includes('started') ? true : undefined),
+      10000
+    );
 
-    const res = await app.inject({ method: 'POST', url: '/api/v1/submissions', headers: auth, payload: { problemId: 'two-sum', code: SLOW_TWO_SUM } });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/submissions',
+      headers: auth,
+      payload: { problemId: 'two-sum', code: SLOW_TWO_SUM },
+    });
     if (res.statusCode !== 202) throw new Error(`submit failed: ${res.statusCode} ${res.body}`);
     const id: string = res.json().submissionId;
     say(`submitted ${id}`);
 
-    const status = async () => (await app!.inject({ url: `/api/v1/submissions/${id}`, headers: auth })).json();
-    await waitFor('worker A to claim the job', async () => ((await status()).status === 'running' ? true : undefined), 10000);
+    const status = async () =>
+      (await app!.inject({ url: `/api/v1/submissions/${id}`, headers: auth })).json();
+    await waitFor(
+      'worker A to claim the job',
+      async () => ((await status()).status === 'running' ? true : undefined),
+      10000
+    );
     a.child.kill('SIGKILL');
     say('worker A claimed the job and was killed with SIGKILL');
     await new Promise((r) => a.child.once('exit', r));
 
     const mid = await status();
-    if (mid.status !== 'running') throw new Error(`expected the job to be stuck in running, got ${mid.status}`);
+    if (mid.status !== 'running') {
+      throw new Error(`expected the job to be stuck in running, got ${mid.status}`);
+    }
 
     const b = startWorker('B', METRICS_PORT);
     workers.push(b.child);
     say(`worker B started; the job is re-claimed once A's ${LEASE_MS} ms lease runs out`);
-    const done = await waitFor('the job to be judged', async () => {
-      const s = await status();
-      return s.status === 'judged' || s.status === 'failed' ? s : undefined;
-    }, 30000);
+    const done = await waitFor(
+      'the job to be judged',
+      async () => {
+        const s = await status();
+        return s.status === 'judged' || s.status === 'failed' ? s : undefined;
+      },
+      30000
+    );
 
     const db = (
       await pool.query<{ attempts: number; stats: number }>(
@@ -111,12 +146,21 @@ async function main() {
     const metrics = await (await fetch(`http://localhost:${METRICS_PORT}/metrics`)).text();
 
     const checks: [string, boolean][] = [
-      ['the user sees one finished, correct result', done.status === 'judged' && done.total > 0 && done.passed === done.total],
-      ['worker B (not A) produced it', b.log().includes(id) && !a.log().includes(`${id} attempt=1 judged`)],
+      [
+        'the user sees one finished, correct result',
+        done.status === 'judged' && done.total > 0 && done.passed === done.total,
+      ],
+      [
+        'worker B (not A) produced it',
+        b.log().includes(id) && !a.log().includes(`${id} attempt=1 judged`),
+      ],
       ['the job was claimed twice (A died, B finished)', db.attempts === 2],
       ['user stats counted the attempt exactly once', db.stats === 1],
       ['metrics: B judged 1 job', /dsa_queue_jobs_total\{outcome="judged"\} 1\b/.test(metrics)],
-      ['metrics: duration histogram has 1 sample', /dsa_queue_job_duration_seconds_count 1\b/.test(metrics)],
+      [
+        'metrics: duration histogram has 1 sample',
+        /dsa_queue_job_duration_seconds_count 1\b/.test(metrics),
+      ],
       ['metrics: nothing left active', /dsa_queue_active 0\b/.test(metrics)],
     ];
     for (const [label, ok] of checks) say(`${ok ? 'PASS' : 'FAIL'} ${label}`);

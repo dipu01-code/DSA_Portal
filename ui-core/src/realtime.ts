@@ -14,7 +14,10 @@ export interface Realtime {
   /** Listen for connect/disconnect; returns unsubscribe. */
   onStatus(listener: (connected: boolean) => void): () => void;
   /** Resolves true when the server announces `submission:finished` for it (false after timeoutMs). */
-  waitForResult(target: { submissionId: string; problemId: string }, timeoutMs: number): Promise<boolean>;
+  waitForResult(
+    target: { submissionId: string; problemId: string },
+    timeoutMs: number
+  ): Promise<boolean>;
   /** `leaderboard:updated`, debounced (it fires on every accepted submission). */
   onLeaderboardUpdate(listener: () => void): () => void;
   /** `daily:new`: a new UTC day's challenge exists. */
@@ -29,7 +32,12 @@ const UNAUTHORIZED_RETRY_MS = 10_000;
  * function, so every reconnect sends the current token). Never required: while the socket is
  * down, callers keep polling.
  */
-export function createRealtime(url: string, getToken: () => string | null, connect: typeof io = io, debounceMs = 1000): Realtime {
+export function createRealtime(
+  url: string,
+  getToken: () => string | null,
+  connect: typeof io = io,
+  debounceMs = 1000
+): Realtime {
   const socket: Socket = connect(url, {
     transports: ['websocket'],
     reconnectionDelayMax: 30_000,

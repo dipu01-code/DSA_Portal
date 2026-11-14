@@ -20,7 +20,9 @@ export function Layout() {
   useEffect(() => desktop?.onMenu((a) => a === 'switch-topic' && navigate('/')), [navigate]);
   return (
     <>
-      <a href="#main" className="skip-link">Skip to content</a>
+      <a href="#main" className="skip-link">
+        Skip to content
+      </a>
       <header className="topbar">
         <strong>DSA Practice</strong>
         <nav aria-label="Main">
@@ -39,7 +41,13 @@ export function Layout() {
           </select>
         </label>
         {user ? (
-          <button type="button" onClick={async () => { await logout(); navigate('/login'); }}>
+          <button
+            type="button"
+            onClick={async () => {
+              await logout();
+              navigate('/login');
+            }}
+          >
             Log out {user.username}
           </button>
         ) : (

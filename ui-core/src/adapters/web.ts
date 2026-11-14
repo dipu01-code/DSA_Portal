@@ -30,4 +30,7 @@ export function webNetworkStatus(w: Window = window): NetworkStatus {
 }
 
 // shortcut: browser notifications are not used yet (Day 7 adds Expo ones); this keeps the interface complete.
-export const noopNotifications: Notifications = { schedule: async () => {}, cancel: async () => {} };
+export const noopNotifications: Notifications = {
+  schedule: async () => {},
+  cancel: async () => {},
+};

@@ -15,7 +15,11 @@ export interface QueueConfig {
   leaseMs: number;
 }
 
-export const DEFAULT_QUEUE_CONFIG: QueueConfig = { maxAttempts: 3, backoffMs: 1000, leaseMs: 30000 };
+export const DEFAULT_QUEUE_CONFIG: QueueConfig = {
+  maxAttempts: 3,
+  backoffMs: 1000,
+  leaseMs: 30000,
+};
 
 export interface Claim {
   id: string;
@@ -29,7 +33,10 @@ export interface Claim {
  * with an expired lease (its worker died). SKIP LOCKED lets many workers (threads or machines)
  * claim in parallel without ever handing the same row to two of them at once.
  */
-export async function claimNext(pool: Pool, leaseMs = DEFAULT_QUEUE_CONFIG.leaseMs): Promise<Claim | null> {
+export async function claimNext(
+  pool: Pool,
+  leaseMs = DEFAULT_QUEUE_CONFIG.leaseMs
+): Promise<Claim | null> {
   const { rows } = await pool.query<Claim>(
     `UPDATE submissions
      SET status = 'running', attempts = attempts + 1, lock_token = gen_random_uuid(),
@@ -63,7 +70,12 @@ export async function extendLease(pool: Pool, claim: Claim, leaseMs: number): Pr
  * dead-letter list (`failed`) once attempts are used up. Null if we no longer own the row
  * (e.g. the result was already saved and only the stats hook failed).
  */
-export async function failJob(pool: Pool, claim: Claim, error: string, cfg: QueueConfig): Promise<'retried' | 'dead' | null> {
+export async function failJob(
+  pool: Pool,
+  claim: Claim,
+  error: string,
+  cfg: QueueConfig
+): Promise<'retried' | 'dead' | null> {
   const { rows } = await pool.query<{ status: string }>(
     `UPDATE submissions SET
        status = CASE WHEN attempts < $3 THEN 'queued' ELSE 'failed' END::submission_status,
@@ -89,7 +101,15 @@ export interface WorkerOptions {
 }
 
 /** Starts `concurrency` claim-and-judge loops. stop() lets in-flight jobs finish first. */
-export async function startWorker({ pool, deps, concurrency, pollMs, queue, metrics = new QueueMetrics(), log = console }: WorkerOptions) {
+export async function startWorker({
+  pool,
+  deps,
+  concurrency,
+  pollMs,
+  queue,
+  metrics = new QueueMetrics(),
+  log = console,
+}: WorkerOptions) {
   const cfg: QueueConfig = { ...DEFAULT_QUEUE_CONFIG, ...queue };
   let stopping = false;
   const wake = new EventEmitter();
@@ -135,7 +155,10 @@ export async function startWorker({ pool, deps, concurrency, pollMs, queue, metr
           continue;
         }
         const started = performance.now();
-        const heartbeat = setInterval(() => void extendLease(pool, c, cfg.leaseMs).catch(() => {}), cfg.leaseMs / 3);
+        const heartbeat = setInterval(
+          () => void extendLease(pool, c, cfg.leaseMs).catch(() => {}),
+          cfg.leaseMs / 3
+        );
         try {
           const s = await judgeSubmission(c.id, deps, () => extendLease(pool, c, cfg.leaseMs));
           metrics.observe((performance.now() - started) / 1000);
@@ -152,7 +175,12 @@ export async function startWorker({ pool, deps, concurrency, pollMs, queue, metr
         } else {
           log.error(`[worker ${n}] job ${claim.id} failed`, err);
           // Only if we still own it: an error after the result was saved (e.g. the stats hook) must not erase it.
-          const outcome = await failJob(pool, claim, String((err as Error)?.message ?? err), cfg).catch(() => null);
+          const outcome = await failJob(
+            pool,
+            claim,
+            String((err as Error)?.message ?? err),
+            cfg
+          ).catch(() => null);
           if (outcome) record(n, claim, outcome);
         }
       }

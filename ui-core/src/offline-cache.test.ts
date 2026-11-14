@@ -3,10 +3,14 @@ import { ApiError } from './api/client';
 import type { DsaApi, Problem } from './api/dsa-api';
 import { storageLocalStore, withProblemCache } from './offline-cache';
 
-const problem = (id: string, topic = 'Arrays', difficulty: Problem['difficulty'] = 'Easy') => ({ id, title: id, topic, difficulty }) as Problem;
+const problem = (id: string, topic = 'Arrays', difficulty: Problem['difficulty'] = 'Easy') =>
+  ({ id, title: id, topic, difficulty }) as Problem;
 const memStorage = () => {
   const m = new Map<string, string>();
-  return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v) };
+  return {
+    getItem: (k: string) => m.get(k) ?? null,
+    setItem: (k: string, v: string) => void m.set(k, v),
+  };
 };
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -42,8 +46,14 @@ describe('withProblemCache', () => {
   it('does not hide real server errors behind the cache', async () => {
     const local = storageLocalStore(memStorage());
     await local.saveProblem(problem('two-sum'));
-    const http = { problem: async () => { throw new ApiError(404, 'NOT_FOUND', 'Problem not found'); } } as unknown as DsaApi;
-    await expect(withProblemCache(http, async () => local).problem('two-sum')).rejects.toMatchObject({ status: 404 });
+    const http = {
+      problem: async () => {
+        throw new ApiError(404, 'NOT_FOUND', 'Problem not found');
+      },
+    } as unknown as DsaApi;
+    await expect(
+      withProblemCache(http, async () => local).problem('two-sum')
+    ).rejects.toMatchObject({ status: 404 });
   });
 });
 

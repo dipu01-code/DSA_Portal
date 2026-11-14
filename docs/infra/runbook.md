@@ -1,12 +1,15 @@
 # Operations & Incident Response Runbook — DSA Practice Platform
 
 ## 1. Incident: PostgreSQL Connection Pool Saturation
+
 ### Symptoms
+
 - Alert: `PostgresPoolSaturation` firing.
 - Metric: `dsa_db_pool_waiting_clients > 5`.
 - Symptoms: API latency spiking, HTTP 500/504 errors on `/api/v1/*`.
 
 ### Diagnostic Steps
+
 1. Inspect live database connections and running queries:
    ```sql
    SELECT pid, usename, state, query_start, now() - query_start AS duration, query
@@ -23,6 +26,7 @@
    ```
 
 ### Resolution
+
 1. Terminate offending blocked backend query:
    ```sql
    SELECT pg_terminate_backend(<pid>);
@@ -32,11 +36,14 @@
 ---
 
 ## 2. Incident: Database Outage / Unreachable
+
 ### Symptoms
+
 - Probe: `GET /health/ready` returns 503.
 - Alert: `DatabaseDown` firing.
 
 ### Resolution
+
 1. Check container status:
    ```bash
    docker compose -f infra/docker-compose.prod.yml ps postgres
@@ -57,8 +64,11 @@
 ---
 
 ## 3. Incident: Stale Leaderboard Cache / Desynchronized Ranks
+
 ### Resolution
+
 Trigger a concurrent background refresh of the leaderboard materialized view:
+
 ```bash
 docker compose -f infra/docker-compose.prod.yml exec postgres psql -U postgres -d dsa_portal -c "CALL refresh_leaderboard(true);"
 ```

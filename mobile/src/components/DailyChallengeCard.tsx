@@ -10,8 +10,14 @@ export function DailyChallengeCard() {
     <Card>
       <H2>Daily challenge · {daily.date}</H2>
       <Body>{daily.problem.title}</Body>
-      <Body muted>{daily.problem.difficulty} · {daily.problem.topic}</Body>
-      <Button title="Solve today's challenge" primary onPress={() => router.push(`/problem/${encodeURIComponent(daily.problemId)}`)} />
+      <Body muted>
+        {daily.problem.difficulty} · {daily.problem.topic}
+      </Body>
+      <Button
+        title="Solve today's challenge"
+        primary
+        onPress={() => router.push(`/problem/${encodeURIComponent(daily.problemId)}`)}
+      />
     </Card>
   );
 }

@@ -13,12 +13,26 @@ export function Results({ submission }: { submission: Submission }) {
         {accepted ? 'Accepted' : 'Wrong answer'} · {submission.passed}/{submission.total} passed
       </Body>
       {submission.results?.map((r) => (
-        <View key={r.testCaseIndex} style={{ borderTopWidth: 1, borderColor: c.border, paddingVertical: space.sm, marginTop: space.xs }} accessible accessibilityLabel={`Test ${(r.testCaseIndex ?? 0) + 1} ${r.passed ? 'passed' : 'failed'}, expected ${r.expected}, got ${r.actual}`}>
+        <View
+          key={r.testCaseIndex}
+          style={{
+            borderTopWidth: 1,
+            borderColor: c.border,
+            paddingVertical: space.sm,
+            marginTop: space.xs,
+          }}
+          accessible
+          accessibilityLabel={`Test ${(r.testCaseIndex ?? 0) + 1} ${r.passed ? 'passed' : 'failed'}, expected ${r.expected}, got ${r.actual}`}
+        >
           <Text style={{ color: r.passed ? c.success : c.danger, fontWeight: '600' }}>
             #{(r.testCaseIndex ?? 0) + 1} {r.passed ? '✓ pass' : '✗ fail'}
           </Text>
-          <Text style={{ color: c.textMuted, fontFamily: MONO, fontSize: 13 }}>expected {r.expected}</Text>
-          <Text style={{ color: c.text, fontFamily: MONO, fontSize: 13 }}>actual {r.actual || '(nothing)'}</Text>
+          <Text style={{ color: c.textMuted, fontFamily: MONO, fontSize: 13 }}>
+            expected {r.expected}
+          </Text>
+          <Text style={{ color: c.text, fontFamily: MONO, fontSize: 13 }}>
+            actual {r.actual || '(nothing)'}
+          </Text>
         </View>
       ))}
     </View>

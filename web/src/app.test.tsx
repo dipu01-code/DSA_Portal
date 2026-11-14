@@ -8,7 +8,9 @@ import { dsa } from './platform';
 import { ResultsPanel } from './components/ResultsPanel';
 
 // Monaco doesn't run in jsdom; the problem page only needs some editor here.
-vi.mock('./components/CodeEditor', () => ({ CodeEditor: () => <textarea aria-label="Code editor" /> }));
+vi.mock('./components/CodeEditor', () => ({
+  CodeEditor: () => <textarea aria-label="Code editor" />,
+}));
 
 const { server, mock } = mockServer('http://api.test');
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -16,7 +18,11 @@ afterAll(() => server.close());
 
 const renderApp = (hash = '#/') => {
   window.location.hash = hash;
-  return render(<DsaProvider value={dsa}><App /></DsaProvider>);
+  return render(
+    <DsaProvider value={dsa}>
+      <App />
+    </DsaProvider>
+  );
 };
 
 describe('web app', () => {
@@ -74,7 +80,9 @@ describe('Day 8: offline submit → reconnect → synced', () => {
     dsa.stores.problem.getState().setCode('function solve({ nums, target }) { return [0, 1]; }');
 
     setNetwork(false);
-    server.use(http.post('http://api.test/api/v1/submissions', () => HttpResponse.error(), { once: true }));
+    server.use(
+      http.post('http://api.test/api/v1/submissions', () => HttpResponse.error(), { once: true })
+    );
     expect(await screen.findByText('○ Offline')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
     expect(await screen.findByText(/Your submission is queued on this device/)).toBeTruthy();
@@ -104,10 +112,20 @@ describe('Day 8: offline submit → reconnect → synced', () => {
 
 describe('ResultsPanel', () => {
   it('shows per-test rows with errors', () => {
-    render(<ResultsPanel view={{ kind: 'submit', status: 'done', passed: 1, total: 2, results: [
-      { testCaseIndex: 0, passed: true, actual: '1', expected: '1' },
-      { testCaseIndex: 1, passed: false, actual: '', expected: '2', error: 'boom' },
-    ] }} />);
+    render(
+      <ResultsPanel
+        view={{
+          kind: 'submit',
+          status: 'done',
+          passed: 1,
+          total: 2,
+          results: [
+            { testCaseIndex: 0, passed: true, actual: '1', expected: '1' },
+            { testCaseIndex: 1, passed: false, actual: '', expected: '2', error: 'boom' },
+          ],
+        }}
+      />
+    );
     expect(screen.getByText('Wrong answer')).toBeTruthy();
     expect(screen.getByText('Error: boom')).toBeTruthy();
     expect(screen.getAllByRole('row')).toHaveLength(3);

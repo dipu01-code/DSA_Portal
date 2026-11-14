@@ -10,7 +10,8 @@ import { statsServiceStub } from './judge';
 import { serveMetrics } from './metrics';
 import { DEFAULT_QUEUE_CONFIG, startWorker } from './pg-queue';
 
-const intEnv = (name: string, fallback: number, min: number) => Math.max(min, Number(process.env[name]) || fallback);
+const intEnv = (name: string, fallback: number, min: number) =>
+  Math.max(min, Number(process.env[name]) || fallback);
 
 async function main() {
   const worker = await startWorker({
@@ -37,14 +38,20 @@ async function main() {
   // Daily challenge (instead of a BullMQ repeatable job, CR-021): create today's row at startup and just
   // after each UTC midnight. Its insert fires daily:new once, however many workers race (ON CONFLICT).
   const daily = new PostgresDailyChallengeStore();
-  const ensureDaily = () => daily.getOrCreate(utcDate()).catch((err) => console.error('[worker] daily challenge failed', err));
+  const ensureDaily = () =>
+    daily
+      .getOrCreate(utcDate())
+      .catch((err) => console.error('[worker] daily challenge failed', err));
   const DAY_MS = 24 * 60 * 60 * 1000;
   let dailyTimer: NodeJS.Timeout;
   const scheduleDaily = () => {
-    dailyTimer = setTimeout(() => {
-      void ensureDaily();
-      scheduleDaily();
-    }, DAY_MS - (Date.now() % DAY_MS) + 1000); // epoch ms are UTC, so this lands 1 s after midnight UTC
+    dailyTimer = setTimeout(
+      () => {
+        void ensureDaily();
+        scheduleDaily();
+      },
+      DAY_MS - (Date.now() % DAY_MS) + 1000
+    ); // epoch ms are UTC, so this lands 1 s after midnight UTC
   };
   void ensureDaily();
   scheduleDaily();

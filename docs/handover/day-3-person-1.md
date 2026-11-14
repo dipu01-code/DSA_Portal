@@ -1,10 +1,13 @@
 # Handover — Day 3, Person 1
 
 ## What was built
+
 Day 3 — Code-execution sandbox for judging user submissions. All on `main` (no branches).
 
 ## Sandbox decision: `/docs/sandbox-decision.md`
+
 Compared `child_process`, `worker_threads`, `vm` (standalone), and `isolated-vm` on:
+
 - Isolation/security
 - Memory limits
 - Timeouts
@@ -17,6 +20,7 @@ Compared `child_process`, `worker_threads`, `vm` (standalone), and `isolated-vm`
 ## Core engine — `/core` (pure TS, no HTTP/DB)
 
 **New module: `src/sandbox.ts`** — `submitCodeSandbox(problem, userCode, options)`
+
 - Runs each test case in its own isolated `child_process`
 - Each child runs `src/sandbox-exec.js` which uses `vm` with a restricted context (no `require`, `process`, `fs`, `network`; `process.exit` not exposed; null-prototype sandbox object)
 - Per-test timeout (default 2s) via `execFileSync` timeout (hard kill → infinite-loop protection)
@@ -26,6 +30,7 @@ Compared `child_process`, `worker_threads`, `vm` (standalone), and `isolated-vm`
 - Captures console output and thrown errors
 
 **Result shape** (from `types.ts`):
+
 ```ts
 interface ExecutionResult {
   problemId: string;
@@ -54,9 +59,11 @@ interface PerTestResult {
 **Updated:** `src/index.ts` — BullMQ worker now calls `runSubmissionSandbox` and returns the `ExecutionResult`. Depends on `@dsa-portal/core`.
 
 ## CLI — `/cli`
+
 Updated to consume the new `ExecutionResult` shape (`status`, `perTest[]`).
 
 ## Verification (real execution)
+
 - `npm install` — OK
 - `npx tsc -p core` / `tsc -p workers` / `tsc -p cli` — clean
 - `npx eslint core/ cli/ workers/` — 0 errors (37 warnings: console statements, `any` type — acceptable)
@@ -66,10 +73,12 @@ Updated to consume the new `ExecutionResult` shape (`status`, `perTest[]`).
 - Normal solution → passed with correct per-test results
 
 ## Branch / push
+
 - All work committed directly on `main` (no person/day branches, per instruction).
 - Push to `https://github.com/dipu01-code/DSA_Portal.git` (origin/main).
 
 ## Next (Day 4)
+
 - Person 1: implement `/server/src/modules/{problems,hints,solutions,submissions,...}` consuming `@dsa-portal/core`, per `/docs/openapi.yaml`.
 - Person 2: implement storage interfaces (`/server/src/db` PostgreSQL, `/core/src/storage` SQLite), sync, `/infra` (Docker).
 - Person 3: `/web`, `/desktop`, `/mobile`, `/ui-core`, `/server/src/modules/{auth,admin,stats}`, `/server/src/cache`.

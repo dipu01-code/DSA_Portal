@@ -46,6 +46,7 @@ flowchart TD
 ```
 
 **Why a monolith plus a worker** (details in [`architecture.md`](../architecture.md) §4):
+
 - One repo, one install, one test run, and types shared through npm workspaces. A 3-person, 10-day project can't afford service discovery, distributed tracing and per-service CI.
 - Judging is the one thing with a different resource profile: CPU-heavy, untrusted, slow. Putting it in its own process keeps API latency flat and lets it scale on its own.
 - `@dsa-portal/core` has no HTTP or database dependency, so the CLI, the server, the worker and the desktop app (offline mode) all run the same engine.
@@ -102,16 +103,16 @@ flowchart LR
     end
 ```
 
-| Hostile sample (all in `core/__tests__/sandbox.test.ts`) | Stopped by |
-|---|---|
-| `while(true){}` | V8 per-test timeout (wall 1), process kill (wall 2) |
-| memory bomb | `--max-old-space-size` (wall 2) |
-| `require('fs')`, `process.exit`, network | nothing reachable in the context (wall 1); fs and spawn also blocked by wall 3 |
-| `this.constructor.constructor('return process')()` | context has no host objects, string code generation is off (wall 1) |
+| Hostile sample (all in `core/__tests__/sandbox.test.ts`)    | Stopped by                                                                                    |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `while(true){}`                                             | V8 per-test timeout (wall 1), process kill (wall 2)                                           |
+| memory bomb                                                 | `--max-old-space-size` (wall 2)                                                               |
+| `require('fs')`, `process.exit`, network                    | nothing reachable in the context (wall 1); fs and spawn also blocked by wall 3                |
+| `this.constructor.constructor('return process')()`          | context has no host objects, string code generation is off (wall 1)                           |
 | prototype pollution, faking the verdict via `JSON`/`toJSON` | built-ins captured before user code runs, null-prototype report, verdict compared on the host |
-| huge console output | output cap per test + `maxBuffer` |
-| replacing the runner | runner sits under a random, non-writable, non-configurable name |
-| endless promise chain | `microtaskMode: 'afterEvaluate'` puts microtasks under the timeout |
+| huge console output                                         | output cap per test + `maxBuffer`                                                             |
+| replacing the runner                                        | runner sits under a random, non-writable, non-configurable name                               |
+| endless promise chain                                       | `microtaskMode: 'afterEvaluate'` puts microtasks under the timeout                            |
 
 Result shape: `{ status: passed|failed|error|timeout, perTest: [{ id, passed, expected, actual, runtimeMs, error }] }`.
 A full threat model (STRIDE, residual risks) is in [`threat-model.md`](../threat-model.md).
@@ -171,29 +172,30 @@ or leader election.
 processes. The profile showed judging was the bottleneck (Node startup was ~95% of judging CPU, and 2 of 10 cores were in use), not
 the API or the queue.
 
-| | end-to-end p50 | p95 | throughput | errors |
-|---|---|---|---|---|
-| Before | 6.1 s | 12.7 s | 7.5 /s | 0% |
-| After (one child per submission + one loop per core) | **1.0 s** | **1.7 s** | **47.8 /s** | 0% |
+|                                                      | end-to-end p50 | p95       | throughput  | errors |
+| ---------------------------------------------------- | -------------- | --------- | ----------- | ------ |
+| Before                                               | 6.1 s          | 12.7 s    | 7.5 /s      | 0%     |
+| After (one child per submission + one loop per core) | **1.0 s**      | **1.7 s** | **47.8 /s** | 0%     |
 
 A third change (parallel reads on the accept path) **measured flat and was reverted**.
 
 **Scaling out:**
+
 - **Workers:** add processes or machines. `SKIP LOCKED` makes this linear until PostgreSQL connections run out (each worker uses ≤ concurrency+2); then PgBouncer.
 - **API:** stateless apart from the per-instance rate-limit counters. Run N instances behind a load balancer. Real-time works across instances because every instance LISTENs.
 - **Database:** the limit at the far end. Read replicas for leaderboard/stats, and partition `submissions` by month if it grows into the hundreds of millions.
 
 ## 7. Trade-offs
 
-| Decision | Gain | Cost / when to revisit |
-|---|---|---|
-| PostgreSQL as queue and event bus (not Redis/BullMQ) | one service fewer; job and result are transactional; triggers can't be forgotten | we built retries/leases/metrics ourselves. Revisit at ~thousands of jobs/s or if Redis arrives anyway (swap behind `SubmissionQueue` / `EventSource`) |
-| child process + vm (not isolated-vm / containers) | OS kill switch, no native addon, works in Electron | ~40 ms Node start per submission; kernel shared with the worker. Containers or gVisor for stronger isolation |
-| one child per submission (Day 9) | 3.7× judging throughput | a memory bomb ends the rest of that submission's tests (same verdict) |
-| quotas in PostgreSQL, rate limits in memory | quotas exact across instances; limits cost nothing | N instances allow N× the request rate. Move counters to Redis when scaling out |
-| small event payloads + REST refetch | missed or reordered events can't show wrong data for long | one extra GET per finished submission |
-| modular monolith | speed, shared types, one deploy | coarse scaling; split services only where profiles differ (as we did for the worker) |
-| hand-written Prometheus text, security headers, rate limiter | no dependencies for ~100 lines total | we maintain them; they are small and tested |
+| Decision                                                     | Gain                                                                             | Cost / when to revisit                                                                                                                                |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PostgreSQL as queue and event bus (not Redis/BullMQ)         | one service fewer; job and result are transactional; triggers can't be forgotten | we built retries/leases/metrics ourselves. Revisit at ~thousands of jobs/s or if Redis arrives anyway (swap behind `SubmissionQueue` / `EventSource`) |
+| child process + vm (not isolated-vm / containers)            | OS kill switch, no native addon, works in Electron                               | ~40 ms Node start per submission; kernel shared with the worker. Containers or gVisor for stronger isolation                                          |
+| one child per submission (Day 9)                             | 3.7× judging throughput                                                          | a memory bomb ends the rest of that submission's tests (same verdict)                                                                                 |
+| quotas in PostgreSQL, rate limits in memory                  | quotas exact across instances; limits cost nothing                               | N instances allow N× the request rate. Move counters to Redis when scaling out                                                                        |
+| small event payloads + REST refetch                          | missed or reordered events can't show wrong data for long                        | one extra GET per finished submission                                                                                                                 |
+| modular monolith                                             | speed, shared types, one deploy                                                  | coarse scaling; split services only where profiles differ (as we did for the worker)                                                                  |
+| hand-written Prometheus text, security headers, rate limiter | no dependencies for ~100 lines total                                             | we maintain them; they are small and tested                                                                                                           |
 
 ## 8. Future work
 

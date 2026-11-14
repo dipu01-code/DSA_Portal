@@ -1,5 +1,21 @@
 /** Keys that are slow to reach on phone keyboards, shown in a bar above the editor. */
-export const EDITOR_KEYS = ['  ', '{', '}', '(', ')', '[', ']', ';', '=', '=>', "'", '"', '.', '<', '>'] as const;
+export const EDITOR_KEYS = [
+  '  ',
+  '{',
+  '}',
+  '(',
+  ')',
+  '[',
+  ']',
+  ';',
+  '=',
+  '=>',
+  "'",
+  '"',
+  '.',
+  '<',
+  '>',
+] as const;
 
 /** Inserts `text` over the current selection; returns the new value and where the cursor goes. */
 export function insertAt(value: string, sel: { start: number; end: number }, text: string) {

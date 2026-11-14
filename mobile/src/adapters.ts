@@ -17,6 +17,8 @@ export function netInfoStatus(): NetworkStatus {
   return {
     isOnline: () => online,
     subscribe: (listener) =>
-      NetInfo.addEventListener((s) => listener(s.isConnected !== false && s.isInternetReachable !== false)),
+      NetInfo.addEventListener((s) =>
+        listener(s.isConnected !== false && s.isInternetReachable !== false)
+      ),
   };
 }

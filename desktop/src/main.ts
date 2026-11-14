@@ -1,4 +1,13 @@
-import { app, BrowserWindow, ipcMain, Menu, protocol, session, shell, type IpcMainInvokeEvent } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  Menu,
+  protocol,
+  session,
+  shell,
+  type IpcMainInvokeEvent,
+} from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { nativeRefresh, REFRESH_TOKEN_KEY } from '@dsa-portal/ui-core/auth/refresh';
@@ -11,7 +20,9 @@ const API = (process.env.DSA_API_URL ?? 'http://localhost:3000').replace(/\/$/, 
 const POLL_MS = Number(process.env.DSA_NETWORK_POLL_MS) || 5000;
 if (process.env.DSA_USER_DATA) app.setPath('userData', process.env.DSA_USER_DATA);
 
-const WEB_DIST = app.isPackaged ? path.join(process.resourcesPath, 'web') : path.resolve(__dirname, '../../web/dist');
+const WEB_DIST = app.isPackaged
+  ? path.join(process.resourcesPath, 'web')
+  : path.resolve(__dirname, '../../web/dist');
 const ORIGIN = 'app://dsa';
 // Monaco injects inline styles; scripts and workers only from the app itself; network only to the API.
 const CSP = [
@@ -27,11 +38,21 @@ const CSP = [
   "frame-ancestors 'none'",
 ].join('; ');
 const MIME: Record<string, string> = {
-  '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml',
-  '.png': 'image/png', '.ttf': 'font/ttf', '.woff': 'font/woff', '.woff2': 'font/woff2', '.wasm': 'application/wasm',
+  '.html': 'text/html',
+  '.js': 'text/javascript',
+  '.css': 'text/css',
+  '.json': 'application/json',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.ttf': 'font/ttf',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.wasm': 'application/wasm',
 };
 
-protocol.registerSchemesAsPrivileged([{ scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true } },
+]);
 
 const tokens = safeStorageStore();
 const offline = createOfflineEngine();
@@ -41,11 +62,20 @@ let network: ReturnType<typeof watchNetwork>; // started once the app is ready (
 function serveApp() {
   protocol.handle('app', async (req) => {
     const { host, pathname } = new URL(req.url);
-    const file = path.normalize(path.join(WEB_DIST, decodeURIComponent(pathname === '/' ? '/index.html' : pathname)));
-    if (host !== 'dsa' || !file.startsWith(WEB_DIST + path.sep)) return new Response('Not found', { status: 404 });
+    const file = path.normalize(
+      path.join(WEB_DIST, decodeURIComponent(pathname === '/' ? '/index.html' : pathname))
+    );
+    if (host !== 'dsa' || !file.startsWith(WEB_DIST + path.sep)) {
+      return new Response('Not found', { status: 404 });
+    }
     try {
       const body = await fs.promises.readFile(file);
-      return new Response(body, { headers: { 'content-type': MIME[path.extname(file)] ?? 'application/octet-stream', 'content-security-policy': CSP } });
+      return new Response(body, {
+        headers: {
+          'content-type': MIME[path.extname(file)] ?? 'application/octet-stream',
+          'content-security-policy': CSP,
+        },
+      });
     } catch {
       return new Response('Not found', { status: 404 });
     }
@@ -58,7 +88,9 @@ const str = (v: unknown, max: number, name: string) => {
   return v;
 };
 const int = (v: unknown, name: string) => {
-  if (!Number.isInteger(v) || (v as number) < 0 || (v as number) > 100) throw new Error(`invalid ${name}`);
+  if (!Number.isInteger(v) || (v as number) < 0 || (v as number) > 100) {
+    throw new Error(`invalid ${name}`);
+  }
   return v as number;
 };
 const CODE_MAX = 64 * 1024; // same order as the server's body limit for submissions
@@ -69,7 +101,12 @@ const handlers: Record<InvokeChannel, (...args: unknown[]) => unknown> = {
   async 'auth:logout'() {
     const t = await tokens.get(REFRESH_TOKEN_KEY);
     await tokens.remove(REFRESH_TOKEN_KEY);
-    if (t) await fetch(`${API}/api/v1/auth/logout`, { method: 'POST', headers: { cookie: `refresh_token=${t}` } }).catch(() => {});
+    if (t) {
+      await fetch(`${API}/api/v1/auth/logout`, {
+        method: 'POST',
+        headers: { cookie: `refresh_token=${t}` },
+      }).catch(() => {});
+    }
   },
   'network:is-online': async () => {
     await network.ready;
@@ -78,8 +115,13 @@ const handlers: Record<InvokeChannel, (...args: unknown[]) => unknown> = {
   'offline:topics': () => offline.topics(),
   'offline:random-problem': (q) => {
     const { topic, difficulty } = (q ?? {}) as { topic?: unknown; difficulty?: unknown };
-    if (difficulty !== undefined && !['Easy', 'Medium', 'Hard'].includes(difficulty as string)) throw new Error('invalid difficulty');
-    return offline.randomProblem({ topic: topic === undefined ? undefined : str(topic, 64, 'topic'), difficulty: difficulty as 'Easy' | undefined });
+    if (difficulty !== undefined && !['Easy', 'Medium', 'Hard'].includes(difficulty as string)) {
+      throw new Error('invalid difficulty');
+    }
+    return offline.randomProblem({
+      topic: topic === undefined ? undefined : str(topic, 64, 'topic'),
+      difficulty: difficulty as 'Easy' | undefined,
+    });
   },
   'offline:problem': (id) => offline.problem(str(id, 128, 'id')),
   'offline:hints': (id, upto) => offline.hints(str(id, 128, 'id'), int(upto, 'upto')),
@@ -89,7 +131,8 @@ const handlers: Record<InvokeChannel, (...args: unknown[]) => unknown> = {
 };
 
 /** Only our own page (app://dsa) may call main; e.g. a navigated-away or injected frame can't. */
-const fromApp = (e: { senderFrame: { url: string } | null }) => e.senderFrame?.url.startsWith(`${ORIGIN}/`) === true;
+const fromApp = (e: { senderFrame: { url: string } | null }) =>
+  e.senderFrame?.url.startsWith(`${ORIGIN}/`) === true;
 
 function registerIpc() {
   for (const channel of INVOKE) {
@@ -135,7 +178,8 @@ function createWindow() {
 }
 
 function buildMenu() {
-  const send = (action: 'run' | 'submit' | 'switch-topic') => () => BrowserWindow.getFocusedWindow()?.webContents.send(EVENTS.menu, action);
+  const send = (action: 'run' | 'submit' | 'switch-topic') => () =>
+    BrowserWindow.getFocusedWindow()?.webContents.send(EVENTS.menu, action);
   Menu.setApplicationMenu(
     Menu.buildFromTemplate([
       ...(process.platform === 'darwin' ? [{ role: 'appMenu' as const }] : []),

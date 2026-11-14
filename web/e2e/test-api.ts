@@ -7,20 +7,29 @@ process.env.BCRYPT_COST ??= '4';
 
 async function main() {
   const { buildApp } = await import('../../server/src/app');
-  const { InMemorySubmissionRepository } = await import('../../server/src/modules/submissions/in-memory-submission.repository');
-  const { InMemoryProblemRepository } = await import('../../server/src/modules/problems/in-memory-problem.repository');
+  const { InMemorySubmissionRepository } =
+    await import('../../server/src/modules/submissions/in-memory-submission.repository');
+  const { InMemoryProblemRepository } =
+    await import('../../server/src/modules/problems/in-memory-problem.repository');
   const { submitCodeSandboxAsync } = await import('../../core/src/sandbox');
   const { SEED_PROBLEMS } = await import('../../server/src/db/seeds/problems-data');
 
   const submissions = new InMemorySubmissionRepository();
-  const app = buildApp({ logger: false, submissions, problems: new InMemoryProblemRepository(SEED_PROBLEMS) });
+  const app = buildApp({
+    logger: false,
+    submissions,
+    problems: new InMemoryProblemRepository(SEED_PROBLEMS),
+  });
   let busy = false;
   setInterval(async () => {
     if (busy) return;
     busy = true;
     try {
       for (const s of submissions.all().filter((x) => x.status === 'queued')) {
-        const result = await submitCodeSandboxAsync(SEED_PROBLEMS.find((p) => p.id === s.problemId)!, s.code);
+        const result = await submitCodeSandboxAsync(
+          SEED_PROBLEMS.find((p) => p.id === s.problemId)!,
+          s.code
+        );
         await submissions.save({ ...s, status: 'judged', result, judgedAt: new Date() });
       }
     } finally {

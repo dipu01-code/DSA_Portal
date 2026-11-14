@@ -1,14 +1,14 @@
 # Mobile code editor: WebView Monaco vs native (Day 6)
 
-| | Monaco in a WebView | Native editor (chosen: `TextInput` + key bar) |
-|---|---|---|
-| Typing on a phone keyboard | Monaco does not officially support mobile browsers: selection handles, autocorrect and IME input are unreliable, the cursor fights the soft keyboard | Native text editing: selection handles, copy/paste, dictation and hardware keyboards work as in every other app |
-| Syntax highlighting, IntelliSense | Full | None (plain monospace text) |
-| App size / start-up | +3 MB of Monaco bundled into the app (it must work offline), a second JS engine (WebView) starting up | No extra dependency |
-| Talking to React state | JSON messages over `postMessage`, async, both directions | Plain `value` / `onChangeText` |
-| Accessibility | Screen readers inside a WebView inside a native app are hard to get right | Native `TextInput` is labelled and read by VoiceOver / TalkBack |
-| Keyboard handling | WebView and `KeyboardAvoidingView` disagree about who resizes | `KeyboardAvoidingView` + `keyboardDismissMode` |
-| Third-party native editors | — | Looked at (e.g. syntax-highlight overlays on a `TextInput`): small, mostly unmaintained, still a `TextInput` underneath, so they add risk without fixing the hard part |
+|                                   | Monaco in a WebView                                                                                                                                  | Native editor (chosen: `TextInput` + key bar)                                                                                                                          |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Typing on a phone keyboard        | Monaco does not officially support mobile browsers: selection handles, autocorrect and IME input are unreliable, the cursor fights the soft keyboard | Native text editing: selection handles, copy/paste, dictation and hardware keyboards work as in every other app                                                        |
+| Syntax highlighting, IntelliSense | Full                                                                                                                                                 | None (plain monospace text)                                                                                                                                            |
+| App size / start-up               | +3 MB of Monaco bundled into the app (it must work offline), a second JS engine (WebView) starting up                                                | No extra dependency                                                                                                                                                    |
+| Talking to React state            | JSON messages over `postMessage`, async, both directions                                                                                             | Plain `value` / `onChangeText`                                                                                                                                         |
+| Accessibility                     | Screen readers inside a WebView inside a native app are hard to get right                                                                            | Native `TextInput` is labelled and read by VoiceOver / TalkBack                                                                                                        |
+| Keyboard handling                 | WebView and `KeyboardAvoidingView` disagree about who resizes                                                                                        | `KeyboardAvoidingView` + `keyboardDismissMode`                                                                                                                         |
+| Third-party native editors        | —                                                                                                                                                    | Looked at (e.g. syntax-highlight overlays on a `TextInput`): small, mostly unmaintained, still a `TextInput` underneath, so they add risk without fixing the hard part |
 
 **Decision:** a native `TextInput` (monospace, no autocorrect/capitalisation, `ascii-capable` keyboard on iOS)
 with a scrollable key bar for `⇥ { } ( ) [ ] ; = => ' " . < >`, and curly quotes straightened as you type

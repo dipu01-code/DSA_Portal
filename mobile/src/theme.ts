@@ -6,7 +6,13 @@ export function useTheme() {
   const system = useColorScheme() === 'dark' ? 'dark' : 'light';
   const { theme } = useSettings();
   const mode = theme === 'system' ? system : theme;
-  return { mode, c: tokens.color[mode], space: tokens.space, radius: tokens.radius, font: tokens.font };
+  return {
+    mode,
+    c: tokens.color[mode],
+    space: tokens.space,
+    radius: tokens.radius,
+    font: tokens.font,
+  };
 }
 
 export const MONO = 'Menlo'; // iOS; Android maps unknown families to its default, so we pass 'monospace' there

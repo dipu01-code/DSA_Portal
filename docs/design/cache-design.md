@@ -6,12 +6,12 @@ Code: `server/src/cache/cache.ts` (helper), `server/src/cache/cached-problem.rep
 
 ## What is cached
 
-| Data | Key | TTL | Invalidated when |
-|---|---|---|---|
-| Problem detail | `dsa:v1:problem:<slug>` | 600 s | admin create/update/delete of that problem |
-| Problem lists (per topic × difficulty) | `dsa:v1:problems:g<gen>:list:<topic\|*>:<difficulty\|*>` | 300 s | any admin change (generation bump) |
-| Leaderboard pages | `dsa:v1:leaderboard:g<gen>:<offset>:<limit>` | 30 s | every judged submission (the worker bumps the generation) |
-| Daily challenge | `dsa:v1:daily:g<gen>:<YYYY-MM-DD>` | 300 s | any admin change to problems |
+| Data                                   | Key                                                      | TTL   | Invalidated when                                          |
+| -------------------------------------- | -------------------------------------------------------- | ----- | --------------------------------------------------------- |
+| Problem detail                         | `dsa:v1:problem:<slug>`                                  | 600 s | admin create/update/delete of that problem                |
+| Problem lists (per topic × difficulty) | `dsa:v1:problems:g<gen>:list:<topic\|*>:<difficulty\|*>` | 300 s | any admin change (generation bump)                        |
+| Leaderboard pages                      | `dsa:v1:leaderboard:g<gen>:<offset>:<limit>`             | 30 s  | every judged submission (the worker bumps the generation) |
+| Daily challenge                        | `dsa:v1:daily:g<gen>:<YYYY-MM-DD>`                       | 300 s | any admin change to problems                              |
 
 **Never cached:** anything user-private: stats, submissions, auth/sessions, solutions-unlocked checks. They are
 per-user (low hit rate) and a stale or wrongly-keyed entry would show one user another user's data.
@@ -60,9 +60,10 @@ problem text and a leaderboard that is fine; that is exactly why user-private an
 ## Usage for Person 1
 
 ```ts
-const key = await cache.genKey('my-namespace', 'part1', 'part2');   // or cache.key('thing', id) for single items
-const value = await cache.getOrLoad(key, 60, () => loadFromDb());   // TTL seconds; jitter + stampede lock built in
-await cache.bumpGeneration('my-namespace');                          // invalidate every key of a namespace
-await cache.invalidate(cache.key('thing', id));                      // invalidate one key
+const key = await cache.genKey('my-namespace', 'part1', 'part2'); // or cache.key('thing', id) for single items
+const value = await cache.getOrLoad(key, 60, () => loadFromDb()); // TTL seconds; jitter + stampede lock built in
+await cache.bumpGeneration('my-namespace'); // invalidate every key of a namespace
+await cache.invalidate(cache.key('thing', id)); // invalidate one key
 ```
+
 `buildApp({ cache })` passes it to routes as `deps.cache`; the server builds it with `cacheFromEnv()` (`REDIS_URL`).

@@ -20,8 +20,17 @@ afterAll(() => server.close());
 function device(storage = memoryStorage()) {
   const listeners = new Set<(o: boolean) => void>();
   let online = true;
-  const network: NetworkStatus = { isOnline: () => online, subscribe: (l) => (listeners.add(l), () => listeners.delete(l)) };
-  const dsa = createDsa({ baseUrl: BASE, network, settingsStorage: storage, pollMs: 1, retry: { attempts: 1, baseDelayMs: 0 } });
+  const network: NetworkStatus = {
+    isOnline: () => online,
+    subscribe: (l) => (listeners.add(l), () => listeners.delete(l)),
+  };
+  const dsa = createDsa({
+    baseUrl: BASE,
+    network,
+    settingsStorage: storage,
+    pollMs: 1,
+    retry: { attempts: 1, baseDelayMs: 0 },
+  });
   const setOnline = (o: boolean) => {
     online = o;
     if (o) server.resetHandlers();
@@ -33,13 +42,22 @@ function device(storage = memoryStorage()) {
 
 function memoryStorage() {
   const m = new Map<string, string>();
-  return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), removeItem: (k: string) => void m.delete(k) };
+  return {
+    getItem: (k: string) => m.get(k) ?? null,
+    setItem: (k: string, v: string) => void m.set(k, v),
+    removeItem: (k: string) => void m.delete(k),
+  };
 }
 
 const until = (check: () => boolean, ms = 3000) =>
   new Promise<void>((resolve, reject) => {
     const t0 = Date.now();
-    const tick = () => (check() ? resolve() : Date.now() - t0 > ms ? reject(new Error('timed out')) : setTimeout(tick, 5));
+    const tick = () =>
+      check()
+        ? resolve()
+        : Date.now() - t0 > ms
+          ? reject(new Error('timed out'))
+          : setTimeout(tick, 5);
     tick();
   });
 
@@ -50,7 +68,9 @@ describe('sync edge cases', () => {
     const { dsa, setOnline } = device();
     await dsa.stores.auth.getState().login(mockUser.email, MOCK_PASSWORD);
     setOnline(false);
-    for (const id of ['two-sum', 'valid-anagram', 'two-sum']) await dsa.stores.submission.getState().submit(id, solve);
+    for (const id of ['two-sum', 'valid-anagram', 'two-sum']) {
+      await dsa.stores.submission.getState().submit(id, solve);
+    }
     expect(dsa.stores.submission.getState().status).toBe('queued');
     expect(pendingCount(dsa.stores.sync.getState())).toBe(3);
 
@@ -58,7 +78,11 @@ describe('sync edge cases', () => {
     const refreshes = mock.state.refreshCalls;
     setOnline(true);
     await until(() => dsa.stores.sync.getState().queue.every((q) => q.state === 'synced'));
-    expect(dsa.stores.sync.getState().queue.map((q) => q.problemId)).toEqual(['two-sum', 'valid-anagram', 'two-sum']);
+    expect(dsa.stores.sync.getState().queue.map((q) => q.problemId)).toEqual([
+      'two-sum',
+      'valid-anagram',
+      'two-sum',
+    ]);
     expect(mock.state.refreshCalls - refreshes).toBe(1);
     expect(dsa.stores.sync.getState().status).toBe('online');
   });
@@ -106,8 +130,13 @@ describe('sync edge cases', () => {
     const b = device(shared); // ...and a second tab opens, reading the same persisted queue
     expect(b.dsa.stores.sync.getState().queue).toHaveLength(1);
     // Both tabs replay at once: B because it just signed in, A because it saw the reconnect.
-    await Promise.all([b.dsa.stores.auth.getState().login(mockUser.email, MOCK_PASSWORD), a.setOnline(true)]);
-    await until(() => [a, b].every((t) => t.dsa.stores.sync.getState().queue[0].state === 'synced'));
+    await Promise.all([
+      b.dsa.stores.auth.getState().login(mockUser.email, MOCK_PASSWORD),
+      a.setOnline(true),
+    ]);
+    await until(() =>
+      [a, b].every((t) => t.dsa.stores.sync.getState().queue[0].state === 'synced')
+    );
     expect(mock.state.submissions.size - before).toBe(1);
   });
 });

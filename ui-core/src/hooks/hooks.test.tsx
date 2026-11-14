@@ -4,7 +4,15 @@ import type { ReactNode } from 'react';
 import { mockServer } from '../mocks/node';
 import { MOCK_PASSWORD, mockUser } from '../mocks/fixtures';
 import { createDsa } from '../create-dsa';
-import { DsaProvider, useAuth, useLeaderboard, useProblem, useStats, useSubmission, useSync } from './index';
+import {
+  DsaProvider,
+  useAuth,
+  useLeaderboard,
+  useProblem,
+  useStats,
+  useSubmission,
+  useSync,
+} from './index';
 import { ApiError } from '../api/client';
 import { errorMessage } from '../stores';
 
@@ -15,7 +23,9 @@ afterAll(() => server.close());
 
 describe('hooks against the mock server', () => {
   const dsa = createDsa({ baseUrl: BASE, pollMs: 1 });
-  const wrapper = ({ children }: { children: ReactNode }) => <DsaProvider value={dsa}>{children}</DsaProvider>;
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <DsaProvider value={dsa}>{children}</DsaProvider>
+  );
 
   it('useAuth logs in and re-renders', async () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
@@ -55,13 +65,19 @@ describe('hooks against the mock server', () => {
   it("useSync hides another user's queued code (Day 9 bug 2)", () => {
     const me = dsa.stores.auth.getState().user!.id;
     const q = { code: 'x', problemId: 'two-sum', queuedAt: '', state: 'pending' as const };
-    dsa.stores.sync.setState({ queue: [{ ...q, key: 'mine', userId: me }, { ...q, key: 'guest', userId: null }, { ...q, key: 'theirs', userId: 'someone-else' }] });
+    dsa.stores.sync.setState({
+      queue: [
+        { ...q, key: 'mine', userId: me },
+        { ...q, key: 'guest', userId: null },
+        { ...q, key: 'theirs', userId: 'someone-else' },
+      ],
+    });
     const { result } = renderHook(() => useSync(), { wrapper });
     expect(result.current.queue.map((x) => x.key)).toEqual(['mine', 'guest']);
     dsa.stores.sync.setState({ queue: [] });
   });
 
-  it('logging out clears the last user\'s stats, problem and result (Day 9 bug 1)', async () => {
+  it("logging out clears the last user's stats, problem and result (Day 9 bug 1)", async () => {
     expect(dsa.stores.stats.getState().summary).not.toBeNull();
     await act(() => dsa.stores.problem.getState().load('two-sum'));
     await act(() => dsa.stores.auth.getState().logout());
@@ -71,9 +87,15 @@ describe('hooks against the mock server', () => {
   });
 
   it('network failures read as a sentence, not "Failed to fetch" (Day 9 bug 4)', () => {
-    expect(errorMessage(new ApiError(0, 'NETWORK_ERROR', 'Failed to fetch'))).toBe('No connection to the server. Check your network and try again.');
-    expect(errorMessage(new ApiError(404, 'NOT_FOUND', 'Problem not found'))).toBe('Problem not found');
-    expect(errorMessage(new ApiError(429, 'QUOTA_EXCEEDED', 'Too many submissions'))).toMatch(/submission limit/);
+    expect(errorMessage(new ApiError(0, 'NETWORK_ERROR', 'Failed to fetch'))).toBe(
+      'No connection to the server. Check your network and try again.'
+    );
+    expect(errorMessage(new ApiError(404, 'NOT_FOUND', 'Problem not found'))).toBe(
+      'Problem not found'
+    );
+    expect(errorMessage(new ApiError(429, 'QUOTA_EXCEEDED', 'Too many submissions'))).toMatch(
+      /submission limit/
+    );
   });
 
   it('hooks outside the provider fail loudly', () => {

@@ -4,7 +4,13 @@ import type { Difficulty, Problem, Submission } from '../api/dsa-api';
 export interface RunResult {
   passed: number;
   total: number;
-  results: Array<{ testCaseIndex: number; passed: boolean; actual: string; expected: string; error?: string }>;
+  results: Array<{
+    testCaseIndex: number;
+    passed: boolean;
+    actual: string;
+    expected: string;
+    error?: string;
+  }>;
 }
 
 /**

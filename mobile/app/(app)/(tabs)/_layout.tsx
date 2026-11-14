@@ -17,7 +17,18 @@ export default function TabsLayout() {
         tabBarIconStyle: { display: 'none' },
         tabBarLabelStyle: { fontSize: 15, fontWeight: '600', marginBottom: 12 },
         headerRight: () => (
-          <Text accessibilityRole="button" onPress={() => void logout()} style={{ color: c.primary, marginRight: 8, fontSize: 16, paddingHorizontal: 12, paddingVertical: 12, minHeight: 44 }}>
+          <Text
+            accessibilityRole="button"
+            onPress={() => void logout()}
+            style={{
+              color: c.primary,
+              marginRight: 8,
+              fontSize: 16,
+              paddingHorizontal: 12,
+              paddingVertical: 12,
+              minHeight: 44,
+            }}
+          >
             Log out
           </Text>
         ),

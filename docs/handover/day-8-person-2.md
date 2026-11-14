@@ -1,7 +1,9 @@
 # Handover — Day 8, Person 2
 
 ## What was built
+
 Day 8 delivers comprehensive database backup automation, disaster recovery procedures, and database security hardening:
+
 1. **Automated Backup & Retention Service (`scripts/backup-service.ts`, `scripts/backup-db.ts`, `scripts/backup-db.sh`)**:
    - Gzip-compressed backups with automated SHA-256 integrity checksums.
    - Manifest creation (`.manifest.json`) capturing timestamp, database, file size, hash, and table row counts.
@@ -26,16 +28,19 @@ Day 8 delivers comprehensive database backup automation, disaster recovery proce
 ## How to Run & Verify
 
 ### 1. Execute Backup
+
 ```bash
 npm run db:backup
 ```
 
 ### 2. Execute Restore
+
 ```bash
 npm run db:restore
 ```
 
 ### 3. Run Test Suite
+
 ```bash
 npm test -- core/__tests__/db/backup-restore.test.ts server/__tests__/security-roles.test.ts
 ```
@@ -45,6 +50,7 @@ npm test -- core/__tests__/db/backup-restore.test.ts server/__tests__/security-r
 ## Viva Defense (Design Decisions & Trade-offs)
 
 > **Viva Defense — Day 8 Architectural Rationale:**
+>
 > 1. **Checksum Manifest Pre-Verification**: In disaster scenarios, restoring from a corrupt or truncated backup can leave the database in a half-migrated, unrecoverable state. By computing and verifying SHA-256 before any data is ingested, we guarantee archive authenticity and prevent silent corruption.
 > 2. **Database-Level Least-Privilege Roles**: Application-level permission checks (e.g. within Node.js) can be bypassed by SQL injection vulnerabilities or rogue worker processes. Enforcing RBAC at the PostgreSQL catalog level (`dsa_worker` can only SELECT problems and UPDATE submissions) provides true defense-in-depth.
 > 3. **Trigger-Based Audit Log Non-Repudiation**: Application logs can be deleted if an attacker gains web shell access. A database-level `BEFORE UPDATE OR DELETE` trigger aborts any modification attempts to `audit_log`, ensuring a tamper-proof audit trail for regulatory compliance.

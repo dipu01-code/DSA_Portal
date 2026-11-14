@@ -24,18 +24,18 @@ function Root() {
   const { c, mode } = useTheme();
   return (
     <>
-        <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
-        <Stack
-          screenOptions={{
-            headerStyle: { backgroundColor: c.surface },
-            headerTintColor: c.text,
-            contentStyle: { backgroundColor: c.bg },
-          }}
-        >
-          <Stack.Screen name="login" options={{ title: 'Sign in' }} />
-          <Stack.Screen name="register" options={{ title: 'Create account' }} />
-          <Stack.Screen name="(app)" options={{ headerShown: false }} />
-        </Stack>
+      <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
+      <Stack
+        screenOptions={{
+          headerStyle: { backgroundColor: c.surface },
+          headerTintColor: c.text,
+          contentStyle: { backgroundColor: c.bg },
+        }}
+      >
+        <Stack.Screen name="login" options={{ title: 'Sign in' }} />
+        <Stack.Screen name="register" options={{ title: 'Create account' }} />
+        <Stack.Screen name="(app)" options={{ headerShown: false }} />
+      </Stack>
     </>
   );
 }

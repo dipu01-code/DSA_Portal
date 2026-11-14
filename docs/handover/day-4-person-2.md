@@ -1,6 +1,7 @@
 # Handover — Day 4, Person 2
 
 ## What was built
+
 Day 4 — Offline-first sync design, distributed operation log schema, PostgreSQL & SQLite sync table migrations, Hybrid Logical Clock (HLC) engine, and the sync integration contract for Person 1 and Person 3.
 
 All work committed to branch `person-2/day-4`.
@@ -10,6 +11,7 @@ All work committed to branch `person-2/day-4`.
 ## 1. Sync Design Specification (`/docs/db/sync-design.md`)
 
 Authored a comprehensive architectural document covering:
+
 1. **Sync Scope**:
    - Bi-directional sync: `submissions` (append-only), `user_problem_stats` (recomputed authoritatively from submissions), `user_settings` (Last-Write-Wins via HLC), `sync_tombstones` (soft deletion markers).
    - Read-only downstream pull: `problems`, `test_cases`, `hints`, `solutions`, `daily_challenges`. Clients execute test suites locally offline and pull updates centrally.
@@ -31,6 +33,7 @@ Authored a comprehensive architectural document covering:
 ## 2. PostgreSQL Migrations (`002_sync_tables.up.sql` / `002_sync_tables.down.sql`)
 
 Created and committed forward and rollback migrations:
+
 - **`sync_op_log`**: Append-only log with `server_seq BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY`, `op_id UUID UNIQUE`, indexes on `(server_seq ASC)` for cursor pull, `(user_id, server_seq ASC)` for user partition, and `(device_id, created_at DESC)`.
 - **`sync_devices`**: Tracks user client devices, client versions, `last_seen_hlc` for clone detection, and `last_synced_seq` watermark.
 - **`user_settings`**: Stores user UI preferences and editor config with `version_hlc` for LWW resolution and automated `updated_at` trigger.
@@ -61,6 +64,7 @@ Created and committed forward and rollback migrations:
 Person 1 will implement the Fastify REST endpoints in `/server/src/modules/sync/` (or update `/docs/openapi.yaml`).
 
 ### Endpoint 1: `POST /api/v1/sync/push`
+
 - **Purpose**: Ingest client batch of offline mutations.
 - **Authentication**: Bearer JWT (`req.user.id`).
 - **Request Body**:
@@ -117,13 +121,17 @@ Person 1 will implement the Fastify REST endpoints in `/server/src/modules/sync/
      ```
 
 ### Endpoint 2: `GET /api/v1/sync/pull`
+
 - **Query Parameters**:
   - `cursor`: integer (last received `server_seq`, default `0`).
   - `limit`: integer (default `100`, max `500`).
 - **Execution Logic**:
   1. Check if `cursor < min_retained_tombstone_seq`. If expired, return HTTP 410 Gone:
      ```json
-     { "error": "SYNC_CURSOR_EXPIRED", "message": "Local cursor is older than tombstone retention window. Full bootstrap required." }
+     {
+       "error": "SYNC_CURSOR_EXPIRED",
+       "message": "Local cursor is older than tombstone retention window. Full bootstrap required."
+     }
      ```
   2. Query `sync_op_log`:
      ```sql
@@ -143,6 +151,7 @@ Person 1 will implement the Fastify REST endpoints in `/server/src/modules/sync/
      ```
 
 ### Endpoint 3: `GET /api/v1/sync/bootstrap`
+
 - **Purpose**: Full state hydration for new device installations or recovery from expired cursors.
 - **Returns**: Latest snapshot of problems, user submissions, aggregated stats, settings, and the current `watermarkSeq` from `MAX(server_seq)`.
 
@@ -153,7 +162,9 @@ Person 1 will implement the Fastify REST endpoints in `/server/src/modules/sync/
 Person 3 will wire the client UI and local offline databases to the sync engine.
 
 ### 1. Generating Operations Offline
+
 Whenever the user writes code, runs tests, or updates settings:
+
 - Update the local domain table in SQLite (`submissions`, `user_problem_stats`, `user_settings`).
 - Advance the local Hybrid Logical Clock:
   ```typescript
@@ -164,6 +175,7 @@ Whenever the user writes code, runs tests, or updates settings:
 - Insert an entry into `local_op_log` with `status = 'pending'`.
 
 ### 2. Sync Worker Loop (Background / Auto-Sync)
+
 - **Triggers**:
   - App launch / window focus.
   - Network status transition (`offline` $\rightarrow$ `online`).

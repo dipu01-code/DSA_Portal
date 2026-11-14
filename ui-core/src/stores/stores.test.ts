@@ -25,12 +25,20 @@ const loggedIn = async () => {
 describe('auth store', () => {
   it('logs in and loads the user', async () => {
     const { stores } = await loggedIn();
-    expect(stores.auth.getState()).toMatchObject({ status: 'authenticated', user: { username: 'demo' }, error: null, busy: false });
+    expect(stores.auth.getState()).toMatchObject({
+      status: 'authenticated',
+      user: { username: 'demo' },
+      error: null,
+      busy: false,
+    });
   });
   it('shows the server message on a failed login', async () => {
     const { stores } = fresh();
     expect(await stores.auth.getState().login(mockUser.email, 'nope')).toBe(false);
-    expect(stores.auth.getState()).toMatchObject({ status: 'unknown', error: 'Invalid email or password' });
+    expect(stores.auth.getState()).toMatchObject({
+      status: 'unknown',
+      error: 'Invalid email or password',
+    });
   });
   it('restore() uses the refresh cookie to get back in, or ends anonymous', async () => {
     const a = fresh();
@@ -39,7 +47,10 @@ describe('auth store', () => {
     mock.state.hasSession = true;
     const b = fresh();
     await b.stores.auth.getState().restore();
-    expect(b.stores.auth.getState()).toMatchObject({ status: 'authenticated', user: { id: mockUser.id } });
+    expect(b.stores.auth.getState()).toMatchObject({
+      status: 'authenticated',
+      user: { id: mockUser.id },
+    });
   });
   it('an expired access token is refreshed transparently; a dead session logs out', async () => {
     const dsa = await loggedIn();
@@ -52,7 +63,9 @@ describe('auth store', () => {
   });
   it('register logs the new user in; logout clears everything', async () => {
     const { stores, client } = fresh();
-    expect(await stores.auth.getState().register('newbie', 'new@dsa.dev', MOCK_PASSWORD)).toBe(true);
+    expect(await stores.auth.getState().register('newbie', 'new@dsa.dev', MOCK_PASSWORD)).toBe(
+      true
+    );
     expect(stores.auth.getState().status).toBe('authenticated');
     await stores.auth.getState().logout();
     expect(stores.auth.getState()).toMatchObject({ status: 'anonymous', user: null });
@@ -64,7 +77,9 @@ describe('auth store', () => {
     const onLogout = vi.fn(async () => {});
     const dsa = createDsa({ baseUrl: BASE, onTokens, onLogout });
     await dsa.stores.auth.getState().login(mockUser.email, MOCK_PASSWORD);
-    expect(onTokens).toHaveBeenCalledWith(expect.objectContaining({ refreshToken: 'mock-refresh' }));
+    expect(onTokens).toHaveBeenCalledWith(
+      expect.objectContaining({ refreshToken: 'mock-refresh' })
+    );
     await dsa.stores.auth.getState().logout();
     expect(onLogout).toHaveBeenCalled();
   });
@@ -75,7 +90,11 @@ describe('problem store', () => {
     const { stores } = await loggedIn();
     stores.problem.getState().setFilters('Strings', 'Medium');
     await stores.problem.getState().loadRandom();
-    expect(stores.problem.getState()).toMatchObject({ problem: { id: 'longest-substring' }, loading: false, error: null });
+    expect(stores.problem.getState()).toMatchObject({
+      problem: { id: 'longest-substring' },
+      loading: false,
+      error: null,
+    });
     expect(stores.problem.getState().code).toContain('function solve');
   });
   it('explains an empty filter result', async () => {
@@ -92,9 +111,14 @@ describe('problem store', () => {
     await p.getState().nextHint();
     expect(p.getState().hints).toHaveLength(2);
     await p.getState().revealSolution();
-    expect(p.getState()).toMatchObject({ solution: null, error: 'Solve the problem first to unlock its solution' });
+    expect(p.getState()).toMatchObject({
+      solution: null,
+      error: 'Solve the problem first to unlock its solution',
+    });
 
-    await dsa.stores.submission.getState().submit('valid-anagram', 'function solve({ x }) { return x; }');
+    await dsa.stores.submission
+      .getState()
+      .submit('valid-anagram', 'function solve({ x }) { return x; }');
     await p.getState().revealSolution();
     expect(p.getState().solution).toContain('function solve');
   });
@@ -105,8 +129,13 @@ describe('submission + stats stores', () => {
     const dsa = await loggedIn();
     const sub = dsa.stores.submission;
     await sub.getState().submit('two-sum', 'function solve({ nums, target }) { return [0, 1]; }');
-    expect(sub.getState()).toMatchObject({ status: 'done', current: { status: 'judged', passed: 2, total: 2 } });
-    await vi.waitFor(() => expect(dsa.stores.stats.getState().summary).toMatchObject({ solved: 1 }));
+    expect(sub.getState()).toMatchObject({
+      status: 'done',
+      current: { status: 'judged', passed: 2, total: 2 },
+    });
+    await vi.waitFor(() =>
+      expect(dsa.stores.stats.getState().summary).toMatchObject({ solved: 1 })
+    );
   });
   it('a wrong answer is judged with per-test results', async () => {
     const dsa = await loggedIn();
@@ -117,14 +146,21 @@ describe('submission + stats stores', () => {
   it('reports errors (unknown problem) and can be reset', async () => {
     const { stores } = await loggedIn();
     await stores.submission.getState().submit('nope', 'x');
-    expect(stores.submission.getState()).toMatchObject({ status: 'error', error: 'Problem not found' });
+    expect(stores.submission.getState()).toMatchObject({
+      status: 'error',
+      error: 'Problem not found',
+    });
     stores.submission.getState().reset();
     expect(stores.submission.getState().status).toBe('idle');
   });
   it('stats load summary and streak, and surface errors', async () => {
     const dsa = await loggedIn();
     await dsa.stores.stats.getState().load();
-    expect(dsa.stores.stats.getState()).toMatchObject({ summary: { totalProblems: 5 }, streak: { days: [] }, error: null });
+    expect(dsa.stores.stats.getState()).toMatchObject({
+      summary: { totalProblems: 5 },
+      streak: { days: [] },
+      error: null,
+    });
     dsa.client.setAccessToken(null);
     mock.state.hasSession = false;
     await dsa.stores.stats.getState().load();
@@ -135,7 +171,11 @@ describe('submission + stats stores', () => {
 describe('settings store', () => {
   it('persists to the given storage and clamps the font size', async () => {
     const data = new Map<string, string>();
-    const storage = { getItem: (k: string) => data.get(k) ?? null, setItem: (k: string, v: string) => void data.set(k, v), removeItem: (k: string) => void data.delete(k) };
+    const storage = {
+      getItem: (k: string) => data.get(k) ?? null,
+      setItem: (k: string, v: string) => void data.set(k, v),
+      removeItem: (k: string) => void data.delete(k),
+    };
     const s = createSettingsStore(storage);
     s.getState().setTheme('dark');
     s.getState().setEditorFontSize(99);

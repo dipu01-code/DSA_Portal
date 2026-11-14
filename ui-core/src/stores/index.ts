@@ -1,7 +1,16 @@
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
 import { ApiError, type ApiClient } from '../api/client';
-import type { DsaApi, Difficulty, Problem, StatsMe, StreakDetail, Submission, TokenPair, User } from '../api/dsa-api';
+import type {
+  DsaApi,
+  Difficulty,
+  Problem,
+  StatsMe,
+  StreakDetail,
+  Submission,
+  TokenPair,
+  User,
+} from '../api/dsa-api';
 
 /** User-facing error text; a network failure gets a plain sentence instead of "Failed to fetch". */
 export const errorMessage = (e: unknown) =>
@@ -9,7 +18,9 @@ export const errorMessage = (e: unknown) =>
     ? 'No connection to the server. Check your network and try again.'
     : e instanceof ApiError && e.code === 'QUOTA_EXCEEDED' // CR-023: per-user submission quota
       ? "You've hit the submission limit. Wait a minute and try again."
-      : e instanceof Error ? e.message : String(e);
+      : e instanceof Error
+        ? e.message
+        : String(e);
 const message = errorMessage;
 
 // ---------------------------------------------------------------- auth
@@ -34,7 +45,11 @@ export interface AuthHooks {
   onLogout?: () => Promise<void>;
 }
 
-export function createAuthStore(api: DsaApi, client: ApiClient, hooks: AuthHooks = {}): StoreApi<AuthState> {
+export function createAuthStore(
+  api: DsaApi,
+  client: ApiClient,
+  hooks: AuthHooks = {}
+): StoreApi<AuthState> {
   return createStore<AuthState>((set, get) => {
     const run = async (fn: () => Promise<void>) => {
       set({ busy: true, error: null });
@@ -110,7 +125,12 @@ export function createProblemStore(api: DsaApi): StoreApi<ProblemState> {
         const problem = await fetchProblem();
         set({ problem, code: problem.starterCode, hints: [], solution: null });
       } catch (e) {
-        set({ error: e instanceof ApiError && e.status === 404 ? 'No problem matches these filters' : message(e) });
+        set({
+          error:
+            e instanceof ApiError && e.status === 404
+              ? 'No problem matches these filters'
+              : message(e),
+        });
       } finally {
         set({ loading: false });
       }
@@ -126,7 +146,12 @@ export function createProblemStore(api: DsaApi): StoreApi<ProblemState> {
       error: null,
       setFilters: (topic, difficulty) => set({ topic, difficulty }),
       loadRandom: () =>
-        open(() => api.randomProblem({ topic: get().topic ?? undefined, difficulty: get().difficulty ?? undefined })),
+        open(() =>
+          api.randomProblem({
+            topic: get().topic ?? undefined,
+            difficulty: get().difficulty ?? undefined,
+          })
+        ),
       load: (id) => open(() => api.problem(id)),
       setCode: (code) => set({ code }),
       async nextHint() {
@@ -144,7 +169,12 @@ export function createProblemStore(api: DsaApi): StoreApi<ProblemState> {
         try {
           set({ solution: await api.solution(problem.id), error: null });
         } catch (e) {
-          set({ error: e instanceof ApiError && e.code === 'SOLUTION_LOCKED' ? 'Solve the problem first to unlock its solution' : message(e) });
+          set({
+            error:
+              e instanceof ApiError && e.code === 'SOLUTION_LOCKED'
+                ? 'Solve the problem first to unlock its solution'
+                : message(e),
+          });
         }
       },
     };
@@ -164,7 +194,8 @@ export interface SubmissionState {
 }
 
 const uuid = () =>
-  globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  globalThis.crypto?.randomUUID?.() ??
+  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 
 /**
  * Polls GET /submissions/:id until judged/failed. `waitBetweenPolls` lets a socket push wake the
@@ -214,7 +245,9 @@ export function createSubmissionStore(
             opts.onJudged?.(s);
             return;
           }
-          if (Date.now() > deadline) throw new Error('Judging is taking too long; check back in a moment');
+          if (Date.now() > deadline) {
+            throw new Error('Judging is taking too long; check back in a moment');
+          }
           await wait({ submissionId, problemId });
         }
       } catch (e) {
@@ -275,5 +308,7 @@ export function createSettingsStore(storage?: StateStorage): StoreApi<SettingsSt
     setEditorFontSize: (px) => set({ editorFontSize: Math.min(28, Math.max(10, Math.round(px))) }),
   });
   if (!storage) return createStore<SettingsState>()((set) => init(set));
-  return createStore<SettingsState>()(persist((set) => init(set), { name: 'dsa.settings', storage: createJSONStorage(() => storage) }));
+  return createStore<SettingsState>()(
+    persist((set) => init(set), { name: 'dsa.settings', storage: createJSONStorage(() => storage) })
+  );
 }

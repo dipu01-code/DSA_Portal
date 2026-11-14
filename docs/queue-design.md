@@ -21,43 +21,43 @@ stateDiagram-v2
 A wrong answer, a timeout or a crash **inside the sandbox** is a normal `judged` result, never a retry.
 Retries are only for infrastructure errors (database down, problem store unreachable, worker bug).
 
-| Column (migration 003) | Purpose |
-|---|---|
-| `attempts` | Claims so far. Incremented when claimed, so a worker that dies mid-job still uses up an attempt. |
-| `run_after` | Backoff. A queued row is not claimable before this time. |
-| `lock_token` | New UUID on every claim. Only the current holder can renew the lease, fail the job or save the result. |
-| `locked_until` | Lease. The worker renews it every `lease/3`. A `running` row past its lease is stalled. |
-| `last_error` | Why the last attempt failed (shown in the dead-letter list). |
+| Column (migration 003) | Purpose                                                                                                |
+| ---------------------- | ------------------------------------------------------------------------------------------------------ |
+| `attempts`             | Claims so far. Incremented when claimed, so a worker that dies mid-job still uses up an attempt.       |
+| `run_after`            | Backoff. A queued row is not claimable before this time.                                               |
+| `lock_token`           | New UUID on every claim. Only the current holder can renew the lease, fail the job or save the result. |
+| `locked_until`         | Lease. The worker renews it every `lease/3`. A `running` row past its lease is stalled.                |
+| `last_error`           | Why the last attempt failed (shown in the dead-letter list).                                           |
 
 ## Settings
 
-| Env | Default | Meaning |
-|---|---|---|
-| `WORKER_MAX_ATTEMPTS` | 3 | Total tries, crashed runs included, before the dead-letter list |
-| `WORKER_BACKOFF_MS` | 1000 | Retry *n* waits `backoff · 2^(n-1)`: 1 s, 2 s, 4 s… |
-| `WORKER_LEASE_MS` | 30000 | How long a dead worker's job stays stuck before another worker re-claims it |
-| `WORKER_METRICS_PORT` | off | Serves `GET /metrics` (Prometheus) on this port |
-| `QUEUE_MAX_WAITING` | 500 | API returns 429 when this many submissions are waiting |
-| `QUEUE_RETRY_AFTER_S` | 10 | `Retry-After` header on that 429 |
+| Env                   | Default | Meaning                                                                     |
+| --------------------- | ------- | --------------------------------------------------------------------------- |
+| `WORKER_MAX_ATTEMPTS` | 3       | Total tries, crashed runs included, before the dead-letter list             |
+| `WORKER_BACKOFF_MS`   | 1000    | Retry _n_ waits `backoff · 2^(n-1)`: 1 s, 2 s, 4 s…                         |
+| `WORKER_LEASE_MS`     | 30000   | How long a dead worker's job stays stuck before another worker re-claims it |
+| `WORKER_METRICS_PORT` | off     | Serves `GET /metrics` (Prometheus) on this port                             |
+| `QUEUE_MAX_WAITING`   | 500     | API returns 429 when this many submissions are waiting                      |
+| `QUEUE_RETRY_AFTER_S` | 10      | `Retry-After` header on that 429                                            |
 
 ## Failure scenarios
 
-| Scenario | What happens | Result for the user |
-|---|---|---|
-| Worker gets SIGTERM (deploy, scale-down) | Stops claiming new work, finishes the jobs it has, exits 0 | Normal result |
-| Worker is SIGKILLed / OOM / machine dies mid-job | Its lease is no longer renewed. After `WORKER_LEASE_MS` another worker re-claims the row (attempt 2) | Result arrives up to one lease later. Judged once (chaos script) |
-| Worker is frozen (GC pause, network partition) past its lease, then wakes | Another worker re-claimed the row with a new `lock_token`. The zombie's final ownership check fails (`LeaseLostError`), so it drops its result | Judged once |
-| Database error while judging | `failJob`: back to `queued` with exponential backoff | Small delay |
-| Same error on every attempt | After `WORKER_MAX_ATTEMPTS`, status `failed`, `last_error` set (dead letter) | Sees `failed`. An admin can requeue it |
-| Job kills its worker every time (poison pill) | Each crash uses up an attempt. Claim number `max+1` dead-letters it without running it | `failed`, never an endless crash loop |
-| Stats hook fails after the result was saved | `failJob` only touches rows still `running` with our token, so the saved result stays | Normal result |
-| `LISTEN` connection drops / a NOTIFY is lost | Workers still poll every `WORKER_POLL_MS` | Up to one poll interval of delay |
-| API worker pool far behind | `POST /submissions` returns 429 + `Retry-After` once `QUEUE_MAX_WAITING` rows are waiting. Idempotent replays are still answered | Retries later instead of piling up work |
-| Database down | API: 500. Workers back off by one poll interval per failed claim. Nothing is lost: jobs are rows | Resumes when the database is back |
+| Scenario                                                                  | What happens                                                                                                                                   | Result for the user                                              |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Worker gets SIGTERM (deploy, scale-down)                                  | Stops claiming new work, finishes the jobs it has, exits 0                                                                                     | Normal result                                                    |
+| Worker is SIGKILLed / OOM / machine dies mid-job                          | Its lease is no longer renewed. After `WORKER_LEASE_MS` another worker re-claims the row (attempt 2)                                           | Result arrives up to one lease later. Judged once (chaos script) |
+| Worker is frozen (GC pause, network partition) past its lease, then wakes | Another worker re-claimed the row with a new `lock_token`. The zombie's final ownership check fails (`LeaseLostError`), so it drops its result | Judged once                                                      |
+| Database error while judging                                              | `failJob`: back to `queued` with exponential backoff                                                                                           | Small delay                                                      |
+| Same error on every attempt                                               | After `WORKER_MAX_ATTEMPTS`, status `failed`, `last_error` set (dead letter)                                                                   | Sees `failed`. An admin can requeue it                           |
+| Job kills its worker every time (poison pill)                             | Each crash uses up an attempt. Claim number `max+1` dead-letters it without running it                                                         | `failed`, never an endless crash loop                            |
+| Stats hook fails after the result was saved                               | `failJob` only touches rows still `running` with our token, so the saved result stays                                                          | Normal result                                                    |
+| `LISTEN` connection drops / a NOTIFY is lost                              | Workers still poll every `WORKER_POLL_MS`                                                                                                      | Up to one poll interval of delay                                 |
+| API worker pool far behind                                                | `POST /submissions` returns 429 + `Retry-After` once `QUEUE_MAX_WAITING` rows are waiting. Idempotent replays are still answered               | Retries later instead of piling up work                          |
+| Database down                                                             | API: 500. Workers back off by one poll interval per failed claim. Nothing is lost: jobs are rows                                               | Resumes when the database is back                                |
 
 ## How duplicates are avoided ("exactly once" from the user's point of view)
 
-Delivery is *at least once* (a re-claimed job runs again). The **effect** happens once:
+Delivery is _at least once_ (a re-claimed job runs again). The **effect** happens once:
 
 1. **Duplicate requests:** the `Idempotency-Key` header plus a unique index on `(user_id, idempotency_key)` give one row per key, even when retries race. A different body with the same key gets 409.
 2. **Duplicate claims:** `FOR UPDATE SKIP LOCKED` hands a row to one worker at a time.
@@ -80,13 +80,13 @@ Closing it would need the save and the token check in one transaction, which mea
 
 Scrape `http://<worker>:$WORKER_METRICS_PORT/metrics`:
 
-| Metric | Type | Notes |
-|---|---|---|
-| `dsa_queue_waiting` | gauge | `status = queued` (includes retries in backoff). Read from PostgreSQL on scrape |
-| `dsa_queue_active` | gauge | `status = running` |
-| `dsa_queue_failed` | gauge | Dead-letter list size |
-| `dsa_queue_jobs_total{outcome}` | counter | `judged`, `retried`, `dead`, `lease_lost`; per worker process |
-| `dsa_queue_job_duration_seconds` | histogram | Claim → saved result; buckets 0.1 … 30 s |
+| Metric                           | Type      | Notes                                                                           |
+| -------------------------------- | --------- | ------------------------------------------------------------------------------- |
+| `dsa_queue_waiting`              | gauge     | `status = queued` (includes retries in backoff). Read from PostgreSQL on scrape |
+| `dsa_queue_active`               | gauge     | `status = running`                                                              |
+| `dsa_queue_failed`               | gauge     | Dead-letter list size                                                           |
+| `dsa_queue_jobs_total{outcome}`  | counter   | `judged`, `retried`, `dead`, `lease_lost`; per worker process                   |
+| `dsa_queue_job_duration_seconds` | histogram | Claim → saved result; buckets 0.1 … 30 s                                        |
 
 The gauges are queue-wide, so every worker reports the same value: use `max(dsa_queue_waiting)`, not `sum`.
 Counters and the histogram are per process: `sum(rate(dsa_queue_jobs_total[5m])) by (outcome)`,
@@ -96,6 +96,7 @@ Counters and the histogram are per process: `sum(rate(dsa_queue_jobs_total[5m]))
 
 `workers/scripts/chaos.ts` starts worker A, submits a slow (correct) solution, SIGKILLs A as soon as
 it claims the job, starts worker B, and checks five things:
+
 - the user sees one correct result
 - B produced it
 - `attempts = 2`
@@ -106,4 +107,5 @@ it claims the job, starts worker B, and checks five things:
 npm run build
 DATABASE_URL=postgresql://postgres@localhost:5432/dsa_portal_test npm run chaos -w workers
 ```
+
 It also runs as part of `TEST_DATABASE_URL=… npx jest workers`.

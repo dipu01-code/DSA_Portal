@@ -26,5 +26,8 @@ export interface Notifications {
 export interface LocalStore {
   saveProblem(problem: import('../api/dsa-api').Problem): Promise<void>;
   getProblem(id: string): Promise<import('../api/dsa-api').Problem | null>;
-  listProblems(filter?: { topic?: string; difficulty?: string }): Promise<import('../api/dsa-api').ProblemSummary[]>;
+  listProblems(filter?: {
+    topic?: string;
+    difficulty?: string;
+  }): Promise<import('../api/dsa-api').ProblemSummary[]>;
 }

@@ -1,9 +1,11 @@
 # Handover — Day 1, Person 1
 
 ## What was built
+
 Day 1 — Architecture, OpenAPI contract, and monorepo dev tooling. Built on top of Day 0 (person-1/day-0) foundation.
 
 ### Monorepo scaffold (root)
+
 - `package.json` — npm workspaces for all 10 packages; scripts: `lint`, `lint:fix`, `format`, `format:write`, `test`, `test:core`, `dev:server`, `build`
 - `tsconfig.json` — base TS config (`module: esnext`, `moduleResolution: bundler`, strict)
 - `.eslintrc.json` — ESLint + `@typescript-eslint/recommended`, type-aware via project tsconfigs
@@ -13,6 +15,7 @@ Day 1 — Architecture, OpenAPI contract, and monorepo dev tooling. Built on top
 - `CLAUDE.md` — shared team context (stack, folder ownership, git conventions, API contract rule)
 
 ### /docs/architecture.md (Person 1)
+
 - Mermaid component diagram (clients → API → engine/judge/cache/realtime → PostgreSQL/SQLite)
 - Mermaid sequence diagram: submit → queue → worker → sandbox → result → client
 - Mermaid deployment view (dev + production)
@@ -20,6 +23,7 @@ Day 1 — Architecture, OpenAPI contract, and monorepo dev tooling. Built on top
 - Stack + folder ownership recap + contract rule
 
 ### /docs/openapi.yaml (Person 1 — source of truth for /api/v1)
+
 - Standard `Error` format (error/message/statusCode/timestamp/path) for all 4xx/5xx
 - Keyset cursor pagination (`CursorPage` + `cursor`/`limit` query params)
 - Auth: register, login, refresh, logout, me
@@ -35,6 +39,7 @@ Day 1 — Architecture, OpenAPI contract, and monorepo dev tooling. Built on top
 - Every endpoint has `operationId`
 
 ## Verification (real execution)
+
 - `npm install` — OK
 - `npm run lint` — 0 errors, 6 warnings → exit 0
 - `npm test` (jest) — No tests found, exit 0 (empty client packages)
@@ -43,6 +48,7 @@ Day 1 — Architecture, OpenAPI contract, and monorepo dev tooling. Built on top
 - `npx @redocly/cli lint docs/openapi.yaml` — **valid** ✓ (exit 0, 17 warnings only)
 
 ## Known issues / caveats
+
 - `no-explicit-any` warnings in `core/src/executor.ts` and `server/src/app.ts` (runtime `any` for request handlers/executor results) — acceptable, warnings only
 - `no-console` warnings in `workers/src/index.ts` — acceptable, warnings only
 - Core tests use vitest (Day 0); root `npm test` uses jest for future client packages
@@ -50,10 +56,12 @@ Day 1 — Architecture, OpenAPI contract, and monorepo dev tooling. Built on top
 - CLAUDE.md content is the shared team context; user will confirm/paste final version
 
 ## Branch / push
+
 - Branch: `person-1/day-1` (based on person-1/day-0)
 - Ready to merge into `main`; push timing controlled by the user
 
 ## Next (Day 2)
+
 - Person 1: implement `/server/src/modules/{problems,hints,solutions,submissions,...}` per openapi.yaml
 - Person 2: `/server/src/db` (PostgreSQL), `/core/src/storage` (SQLite), sync, `/infra` (Docker)
 - Person 3: `/web`, `/desktop`, `/mobile`, `/ui-core`, `/server/src/modules/{auth,admin,stats}`, `/server/src/cache`

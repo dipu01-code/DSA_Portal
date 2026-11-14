@@ -4,19 +4,21 @@
 **Author:** Person 2 (Database, Sync & DevOps)  
 **Target Audience:** Person 1 (Backend & System Architecture), Person 3 (Client Apps: Web, Desktop, Mobile), Architecture Reviewers  
 **Status:** Approved for Implementation  
-**Last Updated:** 2026-11-12  
+**Last Updated:** 2026-11-12
 
 ---
 
 ## 1. Executive Summary & Goals
 
 The DSA Practice Platform supports four distinct client interfaces:
+
 1. **CLI** (Node.js terminal application)
 2. **Desktop** (Electron + SQLite)
 3. **Mobile** (React Native / Expo + SQLite via native driver)
 4. **Web** (React / SPA with in-memory or OPFS/Wasm SQLite fallback)
 
 Users frequently solve algorithmic challenges in disconnected or high-latency environments (airplanes, commutes, campus networks with captive portals). The sync architecture guarantees an **offline-first developer experience**:
+
 - Full local execution and problem evaluation without an internet connection.
 - Local persistence in SQLite using WAL mode for instant writes and high concurrency.
 - Zero data loss when switching between devices or working offline for extended durations.
@@ -83,19 +85,19 @@ Synchronization is modeled on an **append-only Distributed Operation Log (OpLog)
 
 ### 3.1 Operation Log Schema Fields
 
-| Column Name | PostgreSQL Type | SQLite Type | Description |
-| :--- | :--- | :--- | :--- |
-| `server_seq` | `BIGINT GENERATED ALWAYS AS IDENTITY` | `INTEGER` (Nullable) | Monotonically increasing 64-bit integer assigned **strictly by PostgreSQL** upon ingestion. Used as the linear cursor for incremental pulls. Absent on un-synced local records. |
-| `op_id` | `UUID` | `TEXT` | Globally unique client-generated UUID (UUID v4 or v7). Serves as the primary key for **idempotency deduplication**. |
-| `device_id` | `TEXT` | `TEXT` | Stable identifier representing the client installation (UUID generated on first launch and stored in secure client storage). |
-| `user_id` | `UUID` | `TEXT` | ID of the authenticated user who initiated the operation. Prevents multi-tenant data leaks. |
-| `entity` | `TEXT` | `TEXT` | Target domain entity: `submission`, `attempt`, `user_stats`, `settings`, or `tombstone`. |
-| `operation_type` | `TEXT` | `TEXT` | Mutation type: `INSERT`, `UPDATE`, `DELETE`, or `UPSERT`. |
-| `payload` | `JSONB` | `TEXT` | Self-contained serialized JSON payload containing the entity snapshot or delta fields. |
-| `client_timestamp` | `TIMESTAMPTZ` | `TEXT` | ISO 8601 UTC timestamp captured by the client machine at mutation time. Used for auditing and display. |
-| `hybrid_logical_clock` | `TEXT` | `TEXT` | Hybrid Logical Clock string (`l.c.d`) providing strict causal ordering across distributed devices without relying on synchronized wall clocks. |
-| `schema_version` | `INTEGER` | `INTEGER` | Version of the payload structure (defaults to `1`). Used for backward-compatible schema migrations. |
-| `created_at` | `TIMESTAMPTZ` | `TEXT` | Server ingestion timestamp in PostgreSQL (`now()`); local creation timestamp in SQLite. |
+| Column Name            | PostgreSQL Type                       | SQLite Type          | Description                                                                                                                                                                     |
+| :--------------------- | :------------------------------------ | :------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `server_seq`           | `BIGINT GENERATED ALWAYS AS IDENTITY` | `INTEGER` (Nullable) | Monotonically increasing 64-bit integer assigned **strictly by PostgreSQL** upon ingestion. Used as the linear cursor for incremental pulls. Absent on un-synced local records. |
+| `op_id`                | `UUID`                                | `TEXT`               | Globally unique client-generated UUID (UUID v4 or v7). Serves as the primary key for **idempotency deduplication**.                                                             |
+| `device_id`            | `TEXT`                                | `TEXT`               | Stable identifier representing the client installation (UUID generated on first launch and stored in secure client storage).                                                    |
+| `user_id`              | `UUID`                                | `TEXT`               | ID of the authenticated user who initiated the operation. Prevents multi-tenant data leaks.                                                                                     |
+| `entity`               | `TEXT`                                | `TEXT`               | Target domain entity: `submission`, `attempt`, `user_stats`, `settings`, or `tombstone`.                                                                                        |
+| `operation_type`       | `TEXT`                                | `TEXT`               | Mutation type: `INSERT`, `UPDATE`, `DELETE`, or `UPSERT`.                                                                                                                       |
+| `payload`              | `JSONB`                               | `TEXT`               | Self-contained serialized JSON payload containing the entity snapshot or delta fields.                                                                                          |
+| `client_timestamp`     | `TIMESTAMPTZ`                         | `TEXT`               | ISO 8601 UTC timestamp captured by the client machine at mutation time. Used for auditing and display.                                                                          |
+| `hybrid_logical_clock` | `TEXT`                                | `TEXT`               | Hybrid Logical Clock string (`l.c.d`) providing strict causal ordering across distributed devices without relying on synchronized wall clocks.                                  |
+| `schema_version`       | `INTEGER`                             | `INTEGER`            | Version of the payload structure (defaults to `1`). Used for backward-compatible schema migrations.                                                                             |
+| `created_at`           | `TIMESTAMPTZ`                         | `TEXT`               | Server ingestion timestamp in PostgreSQL (`now()`); local creation timestamp in SQLite.                                                                                         |
 
 ### 3.2 Hybrid Logical Clock (HLC) Format
 
@@ -109,6 +111,7 @@ $$\text{HLC} = \texttt{"<physical\_ms>.<logical\_counter>.<device\_id>"}$$
 - `device_id`: Shortened client device identifier (e.g., `d1a4f0`) to break ties deterministically.
 
 #### HLC Update Algorithm on Client Mutation:
+
 ```typescript
 function generateNextHlc(lastHlc: HLC, deviceId: string): HLC {
   const physicalNow = Date.now();
@@ -126,6 +129,7 @@ function generateNextHlc(lastHlc: HLC, deviceId: string): HLC {
 ```
 
 #### HLC Update Algorithm on Receiving Remote Operations:
+
 ```typescript
 function updateHlcOnReceive(localHlc: HLC, remoteHlc: HLC, deviceId: string): HLC {
   const physicalNow = Date.now();
@@ -285,22 +289,25 @@ Synchronization follows a clean decoupled two-phase protocol: **Push local mutat
 
 ## 6. Conflict Resolution Rules per Entity
 
-| Entity | Sync Strategy | Conflict Resolution Rule | Rationale |
-| :--- | :--- | :--- | :--- |
-| **Submissions** | Bi-directional | **Append-Only (No Conflicts)** | Every code execution is an immutable event with a unique UUID. Never updated in place across devices. |
-| **Problem Attempts & Stats** | Bi-directional | **Authoritative Recomputation** | `user_problem_stats` is a materialized view derived deterministically from all recorded submissions. |
-| **User Settings / Preferences** | Bi-directional | **Last-Write-Wins (LWW) via HLC** | Highest HLC wins. Ties broken deterministically by `device_id` lexical order. |
-| **Problems & Test Cases** | Downstream only | **Server-Authoritative** | Read-only to clients. Server publishes new problems; clients pull updates. |
-| **Deletions / Removals** | Bi-directional | **Tombstones with TTL** | Soft delete markers propagate across offline partitions to prevent resurrection. |
+| Entity                          | Sync Strategy   | Conflict Resolution Rule          | Rationale                                                                                             |
+| :------------------------------ | :-------------- | :-------------------------------- | :---------------------------------------------------------------------------------------------------- |
+| **Submissions**                 | Bi-directional  | **Append-Only (No Conflicts)**    | Every code execution is an immutable event with a unique UUID. Never updated in place across devices. |
+| **Problem Attempts & Stats**    | Bi-directional  | **Authoritative Recomputation**   | `user_problem_stats` is a materialized view derived deterministically from all recorded submissions.  |
+| **User Settings / Preferences** | Bi-directional  | **Last-Write-Wins (LWW) via HLC** | Highest HLC wins. Ties broken deterministically by `device_id` lexical order.                         |
+| **Problems & Test Cases**       | Downstream only | **Server-Authoritative**          | Read-only to clients. Server publishes new problems; clients pull updates.                            |
+| **Deletions / Removals**        | Bi-directional  | **Tombstones with TTL**           | Soft delete markers propagate across offline partitions to prevent resurrection.                      |
 
 ### 6.1 Submissions: Append-Only Guarantee
+
 Submissions are modeled as an event stream. When a user runs code on their laptop while offline and later runs code for the same problem on their phone while also offline:
+
 - Laptop generates submission $S_1$ with UUID $U_1$.
 - Phone generates submission $S_2$ with UUID $U_2$.
 - Upon sync, both $S_1$ and $S_2$ are persisted in PostgreSQL without collision.
 - Neither device's work is overwritten.
 
 ### 6.2 Stats: Authoritative Recomputation from Submissions
+
 User problem statistics (`attempts`, `solved`, `first_solved_at`, `streak`) are strictly derived:
 $$\text{attempts}(u, p) = \text{COUNT}(\text{submissions}(u, p))$$
 $$\text{solved}(u, p) = \mathbb{I}(\exists\, s \in \text{submissions}(u, p) \text{ s.t. } s.\text{passed} = s.\text{total})$$
@@ -309,7 +316,9 @@ $$\text{first\_solved\_at}(u, p) = \min \{ s.\text{created\_at} \mid s.\text{pas
 If a client reports outdated stats due to offline runs on multiple devices, the server recalculates the authoritative aggregate from the combined set of submissions and streams the updated stats down to all devices during the next pull.
 
 ### 6.3 Settings: Last-Write-Wins (LWW) via HLC
+
 When a user updates their editor theme on Device A at $HLC_A$ and on Device B at $HLC_B$:
+
 - If $HLC_A > HLC_B$, Device A's setting wins.
 - If $HLC_B > HLC_A$, Device B's setting wins.
 - If $HLC_A = HLC_B$, tie-break deterministically: Device with lexically higher `device_id` string wins.
@@ -318,16 +327,19 @@ When a user updates their editor theme on Device A at $HLC_A$ and on Device B at
 ### 6.4 Clock Skew, Tombstones, and Schema Versioning
 
 #### A. Clock Skew Mitigation
+
 - Physical clocks on mobile phones and laptops drift by seconds or days (e.g. user manually changes time, dead CMOS battery).
 - **Server Guardrail**: If an incoming `client_timestamp` is more than **15 minutes in the future** relative to server `now()`, the server clamps the physical component of the HLC to `now() + 1 ms` while advancing the logical counter $c$. This prevents a rogue device with a clock set to the year 2035 from permanently winning all future LWW conflicts.
 
 #### B. Tombstones (Preventing Resurrection)
+
 - Hard deletions in a distributed system cause the **resurrection anomaly**: If Device A deletes an entity offline by removing the row, Device B (which synced earlier) will push the row back upstream during its next sync.
 - **Solution**: Deletions write a tombstone record into `sync_tombstones` and create an operation with `operation_type = 'DELETE'`.
 - The row in SQLite and PostgreSQL is marked with `is_deleted = true, deleted_at = now()` (or purged if tracked in `sync_tombstones`).
 - **Tombstone TTL**: Tombstones are retained in PostgreSQL for **90 days**. Devices offline for $> 90\text{ days}$ cannot perform incremental cursor pulls and must trigger a snapshot bootstrap.
 
 #### C. Schema Versioning
+
 - Every sync batch and operation contains `schema_version: integer` (current: `1`).
 - Backward-compatible additions (new optional fields) increment minor payload definitions without changing `schema_version`.
 - Breaking structural schema changes increment `schema_version`. If a legacy client pushes an unsupported schema version, the server responds with HTTP 426 (`Upgrade Required`) along with minimum client version metadata.
@@ -336,13 +348,13 @@ When a user updates their editor theme on Device A at $HLC_A$ and on Device B at
 
 ## 7. Failure Modes & Recovery Strategies
 
-| Failure Mode | Trigger Scenario | System Impact | Mitigation & Recovery |
-| :--- | :--- | :--- | :--- |
-| **1. Partial Batch Drop** | Connection drops mid-push or server worker crashes while processing operation 42 of 100. | Incomplete push; client receives no HTTP response. | **Atomic Transaction + Client Retry**: Server wraps entire batch in a PostgreSQL transaction (`BEGIN ... COMMIT`). Either all 100 ops commit or none do. On network timeout, client re-sends the exact same batch. Idempotent `ON CONFLICT (op_id)` guarantees zero duplicate records even if the previous request committed right before connection failure. |
-| **2. Offline for Weeks / Months** | User leaves tablet in drawer for 4 months; thousands of operations accumulated; server tombstone TTL (90 days) expired. | Client cursor is older than server's retained tombstone window; risk of entity resurrection. | **Bootstrap Fallback (`SYNC_CURSOR_EXPIRED`)**: Server checks client cursor against the tombstone watermark. If expired, server returns HTTP 410 / `SYNC_CURSOR_EXPIRED`. Client purges local cache, downloads fresh full snapshot from `/api/v1/sync/bootstrap`, seeds local SQLite, and resets cursor to latest `server_seq`. |
-| **3. Duplicated Device ID** | User clones disk/VM, restores OS backup to second phone, or tests multi-instance locally with identical `device_id`. | Two active devices emit identical `device_id` with non-monotonic, conflicting HLC sequences. | **HLC Monotonicity Violation Detection**: Server tracks `last_seen_hlc` per `(user_id, device_id)` in `sync_devices`. If incoming push has $HLC \le \text{last\_seen\_hlc}$ with a divergent `op_id`, server detects device cloning, issues `REGENERATE_DEVICE_ID` directive. Client generates a fresh UUID for `device_id`, re-keys local pending ops, and re-pushes. |
-| **4. Giant Local Queue** | CLI user solves 200 problems offline over weeks of travel. | Push payload exceeds HTTP body limit (e.g. 10 MB payload). | **Chunked Batching**: Client enforces maximum push batch size of 50 operations. A queue of 200 ops is pushed in 4 sequential HTTP requests with progress reporting. |
-| **5. Database Locked (SQLite Busy)** | Background sync worker attempts to write while user submits code in UI. | SQLite `SQLITE_BUSY` error. | **WAL Mode + Busy Timeout**: All SQLite adapters configure `PRAGMA journal_mode = WAL;` and `PRAGMA busy_timeout = 5000;`. WAL mode allows concurrent readers while one writer is active. |
+| Failure Mode                         | Trigger Scenario                                                                                                        | System Impact                                                                                | Mitigation & Recovery                                                                                                                                                                                                                                                                                                                                                  |
+| :----------------------------------- | :---------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1. Partial Batch Drop**            | Connection drops mid-push or server worker crashes while processing operation 42 of 100.                                | Incomplete push; client receives no HTTP response.                                           | **Atomic Transaction + Client Retry**: Server wraps entire batch in a PostgreSQL transaction (`BEGIN ... COMMIT`). Either all 100 ops commit or none do. On network timeout, client re-sends the exact same batch. Idempotent `ON CONFLICT (op_id)` guarantees zero duplicate records even if the previous request committed right before connection failure.          |
+| **2. Offline for Weeks / Months**    | User leaves tablet in drawer for 4 months; thousands of operations accumulated; server tombstone TTL (90 days) expired. | Client cursor is older than server's retained tombstone window; risk of entity resurrection. | **Bootstrap Fallback (`SYNC_CURSOR_EXPIRED`)**: Server checks client cursor against the tombstone watermark. If expired, server returns HTTP 410 / `SYNC_CURSOR_EXPIRED`. Client purges local cache, downloads fresh full snapshot from `/api/v1/sync/bootstrap`, seeds local SQLite, and resets cursor to latest `server_seq`.                                        |
+| **3. Duplicated Device ID**          | User clones disk/VM, restores OS backup to second phone, or tests multi-instance locally with identical `device_id`.    | Two active devices emit identical `device_id` with non-monotonic, conflicting HLC sequences. | **HLC Monotonicity Violation Detection**: Server tracks `last_seen_hlc` per `(user_id, device_id)` in `sync_devices`. If incoming push has $HLC \le \text{last\_seen\_hlc}$ with a divergent `op_id`, server detects device cloning, issues `REGENERATE_DEVICE_ID` directive. Client generates a fresh UUID for `device_id`, re-keys local pending ops, and re-pushes. |
+| **4. Giant Local Queue**             | CLI user solves 200 problems offline over weeks of travel.                                                              | Push payload exceeds HTTP body limit (e.g. 10 MB payload).                                   | **Chunked Batching**: Client enforces maximum push batch size of 50 operations. A queue of 200 ops is pushed in 4 sequential HTTP requests with progress reporting.                                                                                                                                                                                                    |
+| **5. Database Locked (SQLite Busy)** | Background sync worker attempts to write while user submits code in UI.                                                 | SQLite `SQLITE_BUSY` error.                                                                  | **WAL Mode + Busy Timeout**: All SQLite adapters configure `PRAGMA journal_mode = WAL;` and `PRAGMA busy_timeout = 5000;`. WAL mode allows concurrent readers while one writer is active.                                                                                                                                                                              |
 
 ---
 

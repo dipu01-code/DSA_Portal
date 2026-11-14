@@ -1,11 +1,13 @@
 # Handover — Day 2, Person 1
 
 ## What was built
+
 Day 2 — Core engine as a pure TypeScript library, plus a CLI entry point that consumes it. All on `main` (no branches).
 
 ## /core — pure TS library (no HTTP, no database)
 
 **Exported API and types** (from `core/src/index.ts`):
+
 - `Difficulty` — `'Easy' | 'Medium' | 'Hard'`
 - `Topic` — `'Arrays' | 'Strings' | 'LinkedList' | 'Trees' | 'Graphs' | 'Dynamic Programming' | 'Sorting' | 'Searching'`
 - `TestCase` — `{ input: unknown; expected: unknown }`
@@ -17,6 +19,7 @@ Day 2 — Core engine as a pure TypeScript library, plus a CLI entry point that 
 - `User` — `{ id, username, email, role, createdAt }`
 
 **Modules:**
+
 - `problem.schema.ts` — zod schema (`ProblemSchema`, `TestCaseSchema`, `HintSchema`, `SolutionSchema`) + `validateProblem(input)` for validating JSON problem files. `ProblemInput` inferred type.
 - `problem-loader.ts` — `loadProblems(dir)` reads + validates all `*.json` files; `loadProblemById(dir, id)`; `filterProblems(problems, filters)`.
 - `random-selector.ts` — `selectRandomProblem(problems, {topic, difficulty, recentIds})` picks a random eligible problem, preferring ones not recently seen, falling back to the full pool. Returns `null` when nothing matches.
@@ -26,6 +29,7 @@ Day 2 — Core engine as a pure TypeScript library, plus a CLI entry point that 
 - `problems.ts` — loads the 3 sample problems from `core/problems/*.json` (two-sum, palindrome-number, merge-two-sorted-lists) + `getProblem`, `getRandomProblem`, `listProblems`.
 
 **Storage interfaces (Person 2 implements — NOT implemented here):**
+
 - `ProblemRepository` — `findById`, `findAll(filters)`, `save`
 - `SubmissionRepository` — `save`, `findById`, `findByUser`
 - `UserRepository` — `findById`, `findByUsername`, `save`
@@ -34,11 +38,13 @@ Day 2 — Core engine as a pure TypeScript library, plus a CLI entry point that 
 These are pure interfaces in `core/src/types.ts`. Core has zero database/HTTP dependencies. Person 2 implements them for PostgreSQL (server) and SQLite (local/offline).
 
 ## /cli — terminal entry point
+
 New workspace package `@dsa-portal/cli` (`cli/package.json`, `cli/tsconfig.json`, `cli/src/index.ts`). Interactive readline menu: choose topic → difficulty → random problem → view/stubmit/hints/solution. Tracks solved/attempted stats in memory. Uses `@dsa-portal/core` only.
 
 Added `cli` to root npm workspaces. Build: `tsc` → `cli/dist/index.js` (bin: `dsa`).
 
 ## Verification (real execution)
+
 - `npm install` — OK
 - `npx tsc -p core/tsconfig.json` — clean
 - `npx tsc -p cli/tsconfig.json` — clean
@@ -47,10 +53,12 @@ Added `cli` to root npm workspaces. Build: `tsc` → `cli/dist/index.js` (bin: `
 - `npx tsc -p server/tsconfig.json` — clean (unchanged)
 
 ## Branch / push
+
 - All work committed directly on `main` (no person/day branches, per your instruction).
 - Pushed to `https://github.com/dipu01-code/DSA_Portal.git` (origin/main).
 
 ## Next (Day 3)
+
 - Person 1: implement `/server/src/modules/{problems,hints,solutions,submissions,...}` consuming `@dsa-portal/core`, per `/docs/openapi.yaml`.
 - Person 2: implement the storage interfaces (`/server/src/db` PostgreSQL, `/core/src/storage` SQLite), sync, `/infra` (Docker).
 - Person 3: `/web`, `/desktop`, `/mobile`, `/ui-core`, `/server/src/modules/{auth,admin,stats}`, `/server/src/cache`.

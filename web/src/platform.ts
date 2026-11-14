@@ -20,7 +20,10 @@ declare global {
 export const desktop = window.dsaDesktop;
 
 /** Desktop connectivity (from the main process); routes calls to the offline engine. The browser uses navigator.onLine. */
-export const connectivity = createStore<{ online: boolean; offlineGuest: boolean }>(() => ({ online: true, offlineGuest: false }));
+export const connectivity = createStore<{ online: boolean; offlineGuest: boolean }>(() => ({
+  online: true,
+  offlineGuest: false,
+}));
 
 const offlineOnly = (what: string) => {
   throw new ApiError(0, 'OFFLINE', `${what} needs a connection. Practice still works offline.`);
@@ -33,7 +36,7 @@ const offlineOnly = (what: string) => {
 function withOfflineEngine(http: DsaApi, bridge: DesktopBridge): DsaApi {
   const local = new Map<string, Submission>();
   const online = () => connectivity.getState().online;
-  const orNotFound = <T,>(v: T | null, what: string): T => {
+  const orNotFound = <T>(v: T | null, what: string): T => {
     if (v === null) throw new ApiError(404, 'NOT_FOUND', `${what} not found`);
     return v;
   };
@@ -43,13 +46,22 @@ function withOfflineEngine(http: DsaApi, bridge: DesktopBridge): DsaApi {
     register: (b) => (online() ? http.register(b) : offlineOnly('Creating an account')),
     topics: () => (online() ? http.topics() : bridge.offline.topics()),
     randomProblem: async (q) =>
-      online() ? http.randomProblem(q) : orNotFound(await bridge.offline.randomProblem(q ?? {}), 'Problem'),
-    problem: async (id) => (online() ? http.problem(id) : orNotFound(await bridge.offline.problem(id), 'Problem')),
+      online()
+        ? http.randomProblem(q)
+        : orNotFound(await bridge.offline.randomProblem(q ?? {}), 'Problem'),
+    problem: async (id) =>
+      online() ? http.problem(id) : orNotFound(await bridge.offline.problem(id), 'Problem'),
     hints: (id, upto) => (online() ? http.hints(id, upto) : bridge.offline.hints(id, upto)),
     solution: async (id) => {
       if (online()) return http.solution(id);
       const s = await bridge.offline.solution(id);
-      if (s === null) throw new ApiError(403, 'SOLUTION_LOCKED', 'Solve the problem first to unlock its solution');
+      if (s === null) {
+        throw new ApiError(
+          403,
+          'SOLUTION_LOCKED',
+          'Solve the problem first to unlock its solution'
+        );
+      }
       return s;
     },
     async submit(body, key) {
@@ -57,7 +69,9 @@ function withOfflineEngine(http: DsaApi, bridge: DesktopBridge): DsaApi {
       const s = await bridge.offline.submit(body.problemId, body.code);
       local.set(s.id, s);
       // Judged here for instant feedback; the outbox replays it to the server, whose verdict counts.
-      dsa.stores.sync.getState().enqueue({ ...body, key, local: { passed: s.passed, total: s.total } });
+      dsa.stores.sync
+        .getState()
+        .enqueue({ ...body, key, local: { passed: s.passed, total: s.total } });
       return { submissionId: s.id, status: s.status };
     },
     submission: (id) => {

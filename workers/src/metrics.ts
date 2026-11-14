@@ -40,10 +40,14 @@ export class QueueMetrics {
       `dsa_queue_failed ${depth('failed')}`,
       '# HELP dsa_queue_jobs_total Jobs finished by this worker process, by outcome.',
       '# TYPE dsa_queue_jobs_total counter',
-      ...Object.entries(this.jobs).map(([outcome, n]) => `dsa_queue_jobs_total{outcome="${outcome}"} ${n}`),
+      ...Object.entries(this.jobs).map(
+        ([outcome, n]) => `dsa_queue_jobs_total{outcome="${outcome}"} ${n}`
+      ),
       '# HELP dsa_queue_job_duration_seconds Time from claim to saved result.',
       '# TYPE dsa_queue_job_duration_seconds histogram',
-      ...BUCKETS.map((le, i) => `dsa_queue_job_duration_seconds_bucket{le="${le}"} ${this.bucketCounts[i]}`),
+      ...BUCKETS.map(
+        (le, i) => `dsa_queue_job_duration_seconds_bucket{le="${le}"} ${this.bucketCounts[i]}`
+      ),
       `dsa_queue_job_duration_seconds_bucket{le="+Inf"} ${this.count}`,
       `dsa_queue_job_duration_seconds_sum ${this.sum}`,
       `dsa_queue_job_duration_seconds_count ${this.count}`,

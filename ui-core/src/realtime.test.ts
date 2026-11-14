@@ -25,7 +25,13 @@ beforeAll(async () => {
 afterAll(() => io.close());
 
 const connected = (rt: Realtime) => vi.waitFor(() => expect(rt.connected()).toBe(true));
-const finished = (submissionId: string, problemId = 'p') => ({ submissionId, problemId, status: 'judged', passed: 1, total: 1 });
+const finished = (submissionId: string, problemId = 'p') => ({
+  submissionId,
+  problemId,
+  status: 'judged',
+  passed: 1,
+  total: 1,
+});
 
 describe('realtime (Socket.IO, docs/websocket-events.md)', () => {
   it('sends the access token in the handshake and resolves only its own submission:finished', async () => {
@@ -50,7 +56,15 @@ describe('realtime (Socket.IO, docs/websocket-events.md)', () => {
 
   it('a pushed result ends the wait at once; with the socket gone the store still polls', async () => {
     let polls = 0;
-    const judged = { id: 's1', problemId: 'p', userId: 'u', status: 'judged', passed: 1, total: 1, createdAt: '' } as Submission;
+    const judged = {
+      id: 's1',
+      problemId: 'p',
+      userId: 'u',
+      status: 'judged',
+      passed: 1,
+      total: 1,
+      createdAt: '',
+    } as Submission;
     const api = {
       submit: async () => ({ submissionId: 's1', status: 'queued' }),
       submission: async () => (++polls >= 2 ? judged : { ...judged, status: 'queued' }),
@@ -59,7 +73,13 @@ describe('realtime (Socket.IO, docs/websocket-events.md)', () => {
     } as unknown as DsaApi;
 
     // Socket up: the safety poll is 5 s, so finishing fast proves the push woke it.
-    const live = createDsa({ baseUrl: url, refresh: async () => null, wrapApi: () => api, realtime: createRealtime(url, () => 'tok'), pollMs: 60_000 });
+    const live = createDsa({
+      baseUrl: url,
+      refresh: async () => null,
+      wrapApi: () => api,
+      realtime: createRealtime(url, () => 'tok'),
+      pollMs: 60_000,
+    });
     await connected(live.realtime!);
     const t0 = Date.now();
     const done = live.stores.submission.getState().submit('p', 'code');
@@ -71,9 +91,17 @@ describe('realtime (Socket.IO, docs/websocket-events.md)', () => {
 
     // No socket: plain polling at pollMs.
     polls = 0;
-    const offline = createDsa({ baseUrl: url, refresh: async () => null, wrapApi: () => api, pollMs: 5 });
+    const offline = createDsa({
+      baseUrl: url,
+      refresh: async () => null,
+      wrapApi: () => api,
+      pollMs: 5,
+    });
     await offline.stores.submission.getState().submit('p', 'code');
-    expect(offline.stores.submission.getState()).toMatchObject({ status: 'done', current: { status: 'judged' } });
+    expect(offline.stores.submission.getState()).toMatchObject({
+      status: 'done',
+      current: { status: 'judged' },
+    });
   });
 
   it('debounces leaderboard:updated, forwards daily:new and reports connection status', async () => {

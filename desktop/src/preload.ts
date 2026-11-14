@@ -3,7 +3,8 @@ import type { DesktopBridge } from '@dsa-portal/ui-core';
 import { CONFIG_SYNC, EVENTS, type InvokeChannel } from './ipc-channels';
 
 // Only these typed functions cross into the page: no ipcRenderer, no Node, no generic "send".
-const invoke = <T>(channel: InvokeChannel, ...args: unknown[]) => ipcRenderer.invoke(channel, ...args) as Promise<T>;
+const invoke = <T>(channel: InvokeChannel, ...args: unknown[]) =>
+  ipcRenderer.invoke(channel, ...args) as Promise<T>;
 const on = <T>(channel: string, listener: (v: T) => void) => {
   const handler = (_e: IpcRendererEvent, v: T) => listener(v);
   ipcRenderer.on(channel, handler);

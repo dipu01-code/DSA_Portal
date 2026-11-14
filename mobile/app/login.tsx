@@ -12,16 +12,53 @@ export default function Login() {
   const [password, setPassword] = useState('');
   if (status === 'authenticated') return <Redirect href="/" />;
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={{ padding: space.xl, maxWidth: 480, width: '100%', alignSelf: 'center' }} keyboardShouldPersistTaps="handled">
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={{
+          padding: space.xl,
+          maxWidth: 480,
+          width: '100%',
+          alignSelf: 'center',
+        }}
+        keyboardShouldPersistTaps="handled"
+      >
         <Card>
           <H1>Sign in</H1>
-          <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="emailAddress" returnKeyType="next" />
-          <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" textContentType="password" returnKeyType="go" onSubmitEditing={() => void login(email.trim(), password)} />
+          <Field
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            autoComplete="email"
+            keyboardType="email-address"
+            textContentType="emailAddress"
+            returnKeyType="next"
+          />
+          <Field
+            label="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            autoComplete="password"
+            textContentType="password"
+            returnKeyType="go"
+            onSubmitEditing={() => void login(email.trim(), password)}
+          />
           {error && <ErrorText>{error}</ErrorText>}
-          <Button title="Sign in" primary busy={busy} onPress={() => void login(email.trim(), password)} />
+          <Button
+            title="Sign in"
+            primary
+            busy={busy}
+            onPress={() => void login(email.trim(), password)}
+          />
           <Body muted>
-            {'\n'}New here? <Link href="/register" style={{ color: c.primary }}>Create an account</Link>
+            {'\n'}New here?{' '}
+            <Link href="/register" style={{ color: c.primary }}>
+              Create an account
+            </Link>
           </Body>
         </Card>
       </ScrollView>

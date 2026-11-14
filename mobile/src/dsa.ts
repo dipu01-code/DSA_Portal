@@ -1,11 +1,20 @@
 import { Platform } from 'react-native';
 import { openDatabaseAsync } from 'expo-sqlite';
-import { createDsa, nativeRefresh, REFRESH_TOKEN_KEY, withProblemCache, type LocalStore } from '@dsa-portal/ui-core';
+import {
+  createDsa,
+  nativeRefresh,
+  REFRESH_TOKEN_KEY,
+  withProblemCache,
+  type LocalStore,
+} from '@dsa-portal/ui-core';
 import { netInfoStatus, secureStorage } from './adapters';
 import { sqliteKv, sqliteLocalStore } from './local-store';
 
 // The Android emulator reaches the host computer at 10.0.2.2.
-export const API_URL = (process.env.EXPO_PUBLIC_API_URL || (Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000')).replace(/\/$/, '');
+export const API_URL = (
+  process.env.EXPO_PUBLIC_API_URL ||
+  (Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000')
+).replace(/\/$/, '');
 
 let db: ReturnType<typeof openDatabaseAsync> | null = null;
 const openDb = () => (db ??= openDatabaseAsync('dsa.db'));
@@ -21,7 +30,12 @@ export const dsa = createDsa({
   async onLogout() {
     const token = await secureStorage.get(REFRESH_TOKEN_KEY);
     await secureStorage.remove(REFRESH_TOKEN_KEY);
-    if (token) await fetch(`${API_URL}/api/v1/auth/logout`, { method: 'POST', headers: { cookie: `refresh_token=${token}` } }).catch(() => {});
+    if (token) {
+      await fetch(`${API_URL}/api/v1/auth/logout`, {
+        method: 'POST',
+        headers: { cookie: `refresh_token=${token}` },
+      }).catch(() => {});
+    }
   },
   wrapApi: (http) => withProblemCache(http, localStore),
   settingsStorage: sqliteKv(openDb), // theme + offline submission outbox survive restarts

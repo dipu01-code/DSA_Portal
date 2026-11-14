@@ -129,10 +129,10 @@ The schema satisfies **Third Normal Form (3NF):**
 
 All columns store atomic values. The two uses of `JSONB` are justified:
 
-| Column | Justification |
-|--------|---------------|
-| `test_cases.input` / `test_cases.expected` | Each test case is an indivisible unit. The executor reads the entire JSON blob as-is (`JSON.stringify` → `child_process`). No need to decompose into separate columns. |
-| `submissions.results` | The per-test-case result array (`[{testCaseIndex, passed, actual, expected}]`) is always read and written as a batch. No query ever filters on individual test results. |
+| Column                                     | Justification                                                                                                                                                           |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `test_cases.input` / `test_cases.expected` | Each test case is an indivisible unit. The executor reads the entire JSON blob as-is (`JSON.stringify` → `child_process`). No need to decompose into separate columns.  |
+| `submissions.results`                      | The per-test-case result array (`[{testCaseIndex, passed, actual, expected}]`) is always read and written as a batch. No query ever filters on individual test results. |
 
 These are **document-type attributes** (always accessed as a whole), not multi-valued attributes
 that need independent querying — a widely accepted use of JSONB within 1NF.
@@ -158,10 +158,10 @@ No column can be determined by knowing another non-key column alone.
 
 ## Deliberate Denormalizations
 
-| Table | Column(s) | What it duplicates | Why |
-|-------|-----------|--------------------|-----|
+| Table                | Column(s)                               | What it duplicates                                                              | Why                                                                                                                                                                                                                                                                                                                                                     |
+| -------------------- | --------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `user_problem_stats` | `attempts`, `solved`, `first_solved_at` | Could be derived from `COUNT(*)` / `bool_or(passed = total)` over `submissions` | **Performance:** the leaderboard query (`GET /leaderboard`) and per-topic stats query (`GET /stats/me/topics`) would require scanning all submissions for every user on every request. Pre-computed stats make these O(problems_attempted) instead of O(all_submissions). Updated atomically via `INSERT ... ON CONFLICT DO UPDATE` on each submission. |
-| `submissions` | `passed`, `total` | Could be derived from the `results` JSONB array length and filtering | **Query efficiency:** enables `WHERE passed = total` for the solution-unlock check and partial indexes without parsing JSONB. Also used directly in the API response shape (`Submission.passed`, `Submission.total`). |
+| `submissions`        | `passed`, `total`                       | Could be derived from the `results` JSONB array length and filtering            | **Query efficiency:** enables `WHERE passed = total` for the solution-unlock check and partial indexes without parsing JSONB. Also used directly in the API response shape (`Submission.passed`, `Submission.total`).                                                                                                                                   |
 
 ### Consistency guarantees for denormalized data
 

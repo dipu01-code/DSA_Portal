@@ -1,0 +1,7 @@
+# Generated or owned by other tools
+ui-core/src/api/schema.d.ts
+web/public/mockServiceWorker.js
+package-lock.json
+# Team prompt files, kept verbatim
+CLAUDE.md
+context.md

@@ -20,11 +20,21 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   webServer: [
-    { command: `npx tsx e2e/test-api.ts`, url: `http://127.0.0.1:${API_PORT}/api/v1/health`, env: { PORT: String(API_PORT) }, reuseExistingServer: false },
+    {
+      command: `npx tsx e2e/test-api.ts`,
+      url: `http://127.0.0.1:${API_PORT}/api/v1/health`,
+      env: { PORT: String(API_PORT) },
+      reuseExistingServer: false,
+    },
     {
       command: `npx vite --port ${WEB_PORT} --strictPort`,
       url: `http://localhost:${WEB_PORT}`,
-      env: { API_PROXY: `http://127.0.0.1:${API_PORT}`, VITE_API_URL: '', VITE_REALTIME: '0', VITE_MOCK: '0' },
+      env: {
+        API_PROXY: `http://127.0.0.1:${API_PORT}`,
+        VITE_API_URL: '',
+        VITE_REALTIME: '0',
+        VITE_MOCK: '0',
+      },
       reuseExistingServer: false,
     },
   ],

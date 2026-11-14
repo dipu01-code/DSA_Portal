@@ -10,10 +10,15 @@ const isOffline = (e: unknown) => e instanceof ApiError && e.status === 0;
  * Used by web (localStorage) and mobile (expo-sqlite); desktop has its own bundled offline engine.
  */
 export function withProblemCache(http: DsaApi, local: () => Promise<LocalStore>): DsaApi {
-  const cached = async <T extends { id: string }>(load: () => Promise<T>, fallback: () => Promise<Problem | null>) => {
+  const cached = async <T extends { id: string }>(
+    load: () => Promise<T>,
+    fallback: () => Promise<Problem | null>
+  ) => {
     try {
       const p = await load();
-      void local().then((s) => s.saveProblem(p as never)).catch(() => {});
+      void local()
+        .then((s) => s.saveProblem(p as never))
+        .catch(() => {});
       return p;
     } catch (e) {
       const hit = isOffline(e) ? await fallback() : null;
@@ -23,13 +28,22 @@ export function withProblemCache(http: DsaApi, local: () => Promise<LocalStore>)
   };
   return {
     ...http,
-    problem: (id) => cached(() => http.problem(id), async () => (await local()).getProblem(id)),
+    problem: (id) =>
+      cached(
+        () => http.problem(id),
+        async () => (await local()).getProblem(id)
+      ),
     randomProblem: (q) =>
-      cached(() => http.randomProblem(q), async () => {
-        const s = await local();
-        const pool = await s.listProblems(q);
-        return pool.length ? s.getProblem(pool[Math.floor(Math.random() * pool.length)].id) : null;
-      }),
+      cached(
+        () => http.randomProblem(q),
+        async () => {
+          const s = await local();
+          const pool = await s.listProblems(q);
+          return pool.length
+            ? s.getProblem(pool[Math.floor(Math.random() * pool.length)].id)
+            : null;
+        }
+      ),
     async problems(q) {
       try {
         return await http.problems(q);
@@ -53,7 +67,10 @@ export function withProblemCache(http: DsaApi, local: () => Promise<LocalStore>)
  * LocalStore over a synchronous key-value Storage (window.localStorage on web).
  * shortcut: one JSON blob, fine for the few hundred problems a user opens; move to IndexedDB if it grows past ~2 MB.
  */
-export function storageLocalStore(storage: Pick<Storage, 'getItem' | 'setItem'>, key = 'dsa.problems'): LocalStore {
+export function storageLocalStore(
+  storage: Pick<Storage, 'getItem' | 'setItem'>,
+  key = 'dsa.problems'
+): LocalStore {
   const read = (): Record<string, Problem & { savedAt: number }> => {
     try {
       return JSON.parse(storage.getItem(key) ?? '{}');
@@ -75,8 +92,16 @@ export function storageLocalStore(storage: Pick<Storage, 'getItem' | 'setItem'>,
     },
     listProblems: async (f = {}) =>
       Object.values(read())
-        .filter((p) => (!f.topic || p.topic === f.topic) && (!f.difficulty || p.difficulty === f.difficulty))
+        .filter(
+          (p) =>
+            (!f.topic || p.topic === f.topic) && (!f.difficulty || p.difficulty === f.difficulty)
+        )
         .sort((a, b) => b.savedAt - a.savedAt)
-        .map(({ id, title, topic, difficulty }): ProblemSummary => ({ id, title, topic, difficulty })),
+        .map(({ id, title, topic, difficulty }): ProblemSummary => ({
+          id,
+          title,
+          topic,
+          difficulty,
+        })),
   };
 }

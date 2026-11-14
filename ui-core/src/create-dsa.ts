@@ -48,10 +48,14 @@ export function createDsa(cfg: DsaConfig) {
   const http = createHttpApi(client);
   const api = cfg.wrapApi ? cfg.wrapApi(http) : http;
   const stats = createStatsStore(api);
-  const realtime = cfg.realtime ?? (cfg.realtimeUrl !== undefined ? createRealtime(cfg.realtimeUrl, client.getAccessToken) : null);
+  const realtime =
+    cfg.realtime ??
+    (cfg.realtimeUrl !== undefined ? createRealtime(cfg.realtimeUrl, client.getAccessToken) : null);
   const pollMs = cfg.pollMs ?? 750;
   const waitBetweenPolls = (t: { submissionId: string; problemId: string }) =>
-    realtime?.connected() ? realtime.waitForResult(t, SOCKET_SAFETY_POLL_MS) : new Promise((r) => setTimeout(r, pollMs));
+    realtime?.connected()
+      ? realtime.waitForResult(t, SOCKET_SAFETY_POLL_MS)
+      : new Promise((r) => setTimeout(r, pollMs));
   const auth = createAuthStore(api, client, cfg);
   const sync = createSyncStore(api, {
     network: cfg.network,

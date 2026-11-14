@@ -27,8 +27,13 @@ Every response carries an `x-request-id` header (send your own to correlate logs
 Errors always look like:
 
 ```json
-{ "error": "VALIDATION_ERROR", "message": "difficulty: Invalid enum value ...", "statusCode": 400,
-  "timestamp": "2026-11-11T16:35:52.464Z", "path": "/api/v1/problems" }
+{
+  "error": "VALIDATION_ERROR",
+  "message": "difficulty: Invalid enum value ...",
+  "statusCode": 400,
+  "timestamp": "2026-11-11T16:35:52.464Z",
+  "path": "/api/v1/problems"
+}
 ```
 
 ## Health (not in spec yet, see CR-002)

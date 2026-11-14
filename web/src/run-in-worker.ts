@@ -34,13 +34,23 @@ export function runInWorker(problem: Problem, code: string, timeoutMs = 3000): P
       resolve({
         passed: 0,
         total: problem.testCases.length,
-        results: problem.testCases.map((t, i) => ({ testCaseIndex: i, passed: false, actual: '', expected: t.expected, error: `Time limit (${timeoutMs} ms) exceeded` })),
+        results: problem.testCases.map((t, i) => ({
+          testCaseIndex: i,
+          passed: false,
+          actual: '',
+          expected: t.expected,
+          error: `Time limit (${timeoutMs} ms) exceeded`,
+        })),
       });
     }, timeoutMs);
     worker.onmessage = (e: MessageEvent<RunResult['results']>) => {
       clearTimeout(timer);
       finish();
-      resolve({ passed: e.data.filter((r) => r.passed).length, total: e.data.length, results: e.data });
+      resolve({
+        passed: e.data.filter((r) => r.passed).length,
+        total: e.data.length,
+        results: e.data,
+      });
     };
     worker.postMessage({ code, tests: problem.testCases });
   });

@@ -54,15 +54,15 @@ Everything has a development default; production needs at least `JWT_SECRET`, `D
 All variables, with comments: [`.env.example`](../.env.example). There's no dotenv loader, so export them
 (`set -a; source .env; set +a`) or set them in your process manager.
 
-| Variable | Default | What |
-|---|---|---|
-| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5432/dsa_portal` | API and worker |
-| `JWT_SECRET` | dev secret (**refused when `NODE_ENV=production`**) | API |
-| `PORT` | 3000 | API |
-| `CORS_ORIGINS` | any origin in dev, none in prod | API + Socket.IO allow-list |
-| `WORKER_CONCURRENCY` | 2 | judging loops per worker process |
-| `SUBMIT_QUOTA_PER_MINUTE` / `_PER_DAY` | 10 / 500 | per-user quotas |
-| `WORKER_METRICS_PORT` | off | Prometheus `GET /metrics` on the worker |
+| Variable                               | Default                                                    | What                                    |
+| -------------------------------------- | ---------------------------------------------------------- | --------------------------------------- |
+| `DATABASE_URL`                         | `postgresql://postgres:postgres@localhost:5432/dsa_portal` | API and worker                          |
+| `JWT_SECRET`                           | dev secret (**refused when `NODE_ENV=production`**)        | API                                     |
+| `PORT`                                 | 3000                                                       | API                                     |
+| `CORS_ORIGINS`                         | any origin in dev, none in prod                            | API + Socket.IO allow-list              |
+| `WORKER_CONCURRENCY`                   | 2                                                          | judging loops per worker process        |
+| `SUBMIT_QUOTA_PER_MINUTE` / `_PER_DAY` | 10 / 500                                                   | per-user quotas                         |
+| `WORKER_METRICS_PORT`                  | off                                                        | Prometheus `GET /metrics` on the worker |
 
 ## Tests
 
@@ -85,15 +85,15 @@ npm run load  -w workers    # 100 concurrent submissions; p50/p95/p99, throughpu
 
 ## Layout
 
-| Path | What |
-|---|---|
-| `server/src/app.ts` | `buildApp()`: plugins, error format, limits, security headers, routes, `/docs` |
-| `server/src/index.ts` | production wiring (PostgreSQL stores) |
-| `server/src/modules/*` | one folder per feature: routes + store (in-memory for tests, PostgreSQL for real) |
-| `server/src/db` | pool, migrations, repositories, seed (Person 2) |
-| `workers/src/main.ts` | worker entry: queue loop, daily challenge, metrics, graceful shutdown |
-| `workers/src/pg-queue.ts` | claim with `FOR UPDATE SKIP LOCKED`, leases, retries, dead-letter |
-| `core/src/sandbox.ts` | sandbox: one child process per test, vm context, permission model, limits |
+| Path                      | What                                                                              |
+| ------------------------- | --------------------------------------------------------------------------------- |
+| `server/src/app.ts`       | `buildApp()`: plugins, error format, limits, security headers, routes, `/docs`    |
+| `server/src/index.ts`     | production wiring (PostgreSQL stores)                                             |
+| `server/src/modules/*`    | one folder per feature: routes + store (in-memory for tests, PostgreSQL for real) |
+| `server/src/db`           | pool, migrations, repositories, seed (Person 2)                                   |
+| `workers/src/main.ts`     | worker entry: queue loop, daily challenge, metrics, graceful shutdown             |
+| `workers/src/pg-queue.ts` | claim with `FOR UPDATE SKIP LOCKED`, leases, retries, dead-letter                 |
+| `core/src/sandbox.ts`     | sandbox: one child process per test, vm context, permission model, limits         |
 
 Design docs: [`architecture.md`](../docs/architecture.md), [`queue-design.md`](../docs/queue-design.md),
 [`sandbox-decision.md`](../docs/sandbox-decision.md), [`threat-model.md`](../docs/threat-model.md),

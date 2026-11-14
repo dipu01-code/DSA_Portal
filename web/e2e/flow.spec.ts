@@ -5,7 +5,11 @@
 import { test, expect, type Page } from '@playwright/test';
 import { SEED_PROBLEMS } from '../../server/src/db/seeds/problems-data';
 
-const user = { username: `e2e_${Date.now().toString(36)}`, email: `e2e_${Date.now()}@dsa.dev`, password: 'green-lamp-42' };
+const user = {
+  username: `e2e_${Date.now().toString(36)}`,
+  email: `e2e_${Date.now()}@dsa.dev`,
+  password: 'green-lamp-42',
+};
 
 /** Replaces the Monaco content via the clipboard, like a user pasting their solution. */
 async function paste(page: Page, code: string) {
@@ -58,7 +62,9 @@ test('register → login → choose topic → solve → result → stats', async
   await paste(page, problem.solution.code);
   await page.getByRole('button', { name: 'Submit' }).click();
   await expect(page.getByText('Accepted', { exact: true })).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByText(`${problem.testCases.length}/${problem.testCases.length} passed`)).toBeVisible();
+  await expect(
+    page.getByText(`${problem.testCases.length}/${problem.testCases.length} passed`)
+  ).toBeVisible();
 
   await page.getByRole('link', { name: 'Stats' }).click();
   await expect(page.getByRole('heading', { name: 'Your progress' })).toBeVisible();

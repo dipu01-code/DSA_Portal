@@ -27,9 +27,30 @@ export function App() {
         <Route element={<Layout />}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/" element={<RequireAuth><HomePage /></RequireAuth>} />
-          <Route path="/problem/:id" element={<RequireAuth><ProblemPage /></RequireAuth>} />
-          <Route path="/stats" element={<RequireAuth><StatsPage /></RequireAuth>} />
+          <Route
+            path="/"
+            element={
+              <RequireAuth>
+                <HomePage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/problem/:id"
+            element={
+              <RequireAuth>
+                <ProblemPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/stats"
+            element={
+              <RequireAuth>
+                <StatsPage />
+              </RequireAuth>
+            }
+          />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

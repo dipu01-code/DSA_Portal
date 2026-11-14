@@ -10,7 +10,9 @@ export default function AppLayout() {
   const { c } = useTheme();
   if (status === 'unknown') {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg }}>
+      <View
+        style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg }}
+      >
         <ActivityIndicator accessibilityLabel="Loading" color={c.primary} />
       </View>
     );
@@ -19,7 +21,13 @@ export default function AppLayout() {
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <SyncBar />
-      <Stack screenOptions={{ headerStyle: { backgroundColor: c.surface }, headerTintColor: c.text, contentStyle: { backgroundColor: c.bg } }}>
+      <Stack
+        screenOptions={{
+          headerStyle: { backgroundColor: c.surface },
+          headerTintColor: c.text,
+          contentStyle: { backgroundColor: c.bg },
+        }}
+      >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="problem/[id]" options={{ title: 'Problem' }} />
       </Stack>

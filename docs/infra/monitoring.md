@@ -1,11 +1,13 @@
 # Monitoring & Observability Architecture — DSA Practice Platform
 
 ## Overview
+
 The monitoring subsystem provides real-time health verification and performance metrics across the database, sync engine, and backend services.
 
 ---
 
 ## 1. Metric Exposition (`GET /metrics`)
+
 Exposed via Prometheus standard exposition format at `/metrics`:
 
 ```
@@ -43,9 +45,9 @@ flowchart TD
 
 ## 3. Production Alerting Rules
 
-| Alert Rule | Condition | Duration | Severity | Action |
-| :--- | :--- | :--- | :--- | :--- |
-| `PostgresPoolSaturation` | `dsa_db_pool_waiting_clients > 5` | 1 min | Critical | Scale pool `max: 20` or investigate long-running locks in `pg_stat_activity`. |
-| `DatabaseDown` | Readiness check failure | 30 sec | Disaster | Trigger failover / auto-restart PostgreSQL container. |
-| `HighQueryLatency` | Query latency > 250ms | 2 min | Warning | Inspect `pg_stat_statements` or refresh Materialized View. |
-| `ExcessiveSyncConflicts` | Conflicts rate > 10/sec | 3 min | Warning | Investigate clock drift on client devices. |
+| Alert Rule               | Condition                         | Duration | Severity | Action                                                                        |
+| :----------------------- | :-------------------------------- | :------- | :------- | :---------------------------------------------------------------------------- |
+| `PostgresPoolSaturation` | `dsa_db_pool_waiting_clients > 5` | 1 min    | Critical | Scale pool `max: 20` or investigate long-running locks in `pg_stat_activity`. |
+| `DatabaseDown`           | Readiness check failure           | 30 sec   | Disaster | Trigger failover / auto-restart PostgreSQL container.                         |
+| `HighQueryLatency`       | Query latency > 250ms             | 2 min    | Warning  | Inspect `pg_stat_statements` or refresh Materialized View.                    |
+| `ExcessiveSyncConflicts` | Conflicts rate > 10/sec           | 3 min    | Warning  | Investigate clock drift on client devices.                                    |

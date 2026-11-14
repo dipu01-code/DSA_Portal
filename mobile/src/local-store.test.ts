@@ -5,20 +5,42 @@ import { sqliteKv, sqliteLocalStore, type SqlDb } from './local-store';
 import type { Problem } from '@dsa-portal/ui-core';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { DatabaseSync } = require('node:sqlite') as { DatabaseSync: new (p: string) => { exec(s: string): void; prepare(s: string): { run(...a: unknown[]): unknown; get(...a: unknown[]): unknown; all(...a: unknown[]): unknown[] } } };
+const { DatabaseSync } = require('node:sqlite') as {
+  DatabaseSync: new (p: string) => {
+    exec(s: string): void;
+    prepare(s: string): {
+      run(...a: unknown[]): unknown;
+      get(...a: unknown[]): unknown;
+      all(...a: unknown[]): unknown[];
+    };
+  };
+};
 
 function nodeSqlite(): SqlDb {
   const db = new DatabaseSync(':memory:');
   return {
     execAsync: async (sql) => db.exec(sql),
     runAsync: async (sql, ...p) => db.prepare(sql).run(...p),
-    getFirstAsync: async <T,>(sql: string, ...p: Array<string | number>) => (db.prepare(sql).get(...p) as T) ?? null,
-    getAllAsync: async <T,>(sql: string, ...p: Array<string | number>) => db.prepare(sql).all(...p).map((r) => ({ ...(r as object) })) as T[],
+    getFirstAsync: async <T>(sql: string, ...p: Array<string | number>) =>
+      (db.prepare(sql).get(...p) as T) ?? null,
+    getAllAsync: async <T>(sql: string, ...p: Array<string | number>) =>
+      db
+        .prepare(sql)
+        .all(...p)
+        .map((r) => ({ ...(r as object) })) as T[],
   };
 }
 
 const problem = (id: string, topic: string, difficulty: Problem['difficulty']): Problem => ({
-  id, title: id.toUpperCase(), topic, difficulty, description: 'd', starterCode: 's', testCases: [{ input: '1', expected: '1' }], hints: ['h'], solution: '',
+  id,
+  title: id.toUpperCase(),
+  topic,
+  difficulty,
+  description: 'd',
+  starterCode: 's',
+  testCases: [{ input: '1', expected: '1' }],
+  hints: ['h'],
+  solution: '',
 });
 
 describe('sqliteLocalStore', () => {
@@ -31,7 +53,9 @@ describe('sqliteLocalStore', () => {
     expect((await store.getProblem('a'))?.title).toBe('A v2');
     expect(await store.getProblem('missing')).toBeNull();
     expect((await store.listProblems()).map((p) => p.id).sort()).toEqual(['a', 'b']);
-    expect(await store.listProblems({ topic: 'Graphs', difficulty: 'Hard' })).toEqual([{ id: 'b', title: 'B', topic: 'Graphs', difficulty: 'Hard' }]);
+    expect(await store.listProblems({ topic: 'Graphs', difficulty: 'Hard' })).toEqual([
+      { id: 'b', title: 'B', topic: 'Graphs', difficulty: 'Hard' },
+    ]);
     expect(await store.listProblems({ topic: 'Graphs', difficulty: 'Easy' })).toEqual([]);
   });
 

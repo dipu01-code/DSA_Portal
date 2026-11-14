@@ -9,6 +9,7 @@ Person 2 manages the infrastructure layer (`/infra`, `/docs/infra`, docker files
 ## Services
 
 ### 1. PostgreSQL 16 (`dsa_portal_postgres`)
+
 - **Port**: `5432`
 - **Database**: `dsa_portal`
 - **User / Password**: `postgres / postgres`
@@ -18,6 +19,7 @@ Person 2 manages the infrastructure layer (`/infra`, `/docs/infra`, docker files
 - **Volume**: `dsa_portal_postgres_data` persistent volume.
 
 ### 2. Redis 7 (`dsa_portal_redis`)
+
 - **Port**: `6379`
 - **Connection URL**: `redis://localhost:6379`
 - **Purpose**: BullMQ submission queue (used by Person 1's `/workers`) and caching (used by Person 3's `/server/src/cache`).
@@ -29,32 +31,38 @@ Person 2 manages the infrastructure layer (`/infra`, `/docs/infra`, docker files
 ## Usage Commands
 
 ### Start containers in background
+
 ```bash
 docker compose -f infra/docker-compose.yml up -d
 ```
 
 ### Check status and health
+
 ```bash
 docker compose -f infra/docker-compose.yml ps
 ```
 
 ### View container logs
+
 ```bash
 docker compose -f infra/docker-compose.yml logs -f postgres
 docker compose -f infra/docker-compose.yml logs -f redis
 ```
 
 ### Connect to PostgreSQL via psql CLI inside container
+
 ```bash
 docker compose -f infra/docker-compose.yml exec postgres psql -U postgres -d dsa_portal
 ```
 
 ### Stop containers (preserving data)
+
 ```bash
 docker compose -f infra/docker-compose.yml stop
 ```
 
 ### Tear down containers and wipe data volumes
+
 ```bash
 docker compose -f infra/docker-compose.yml down -v
 ```

@@ -3,7 +3,13 @@
  * problem with the offline engine → API comes back → the queued submission syncs and is judged
  * on the server. Needs `npm run build -w desktop` first (web/dist + desktop/dist).
  */
-import { test, expect, _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
+import {
+  test,
+  expect,
+  _electron as electron,
+  type ElectronApplication,
+  type Page,
+} from '@playwright/test';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -21,13 +27,19 @@ let worker: NodeJS.Timeout | undefined;
 test.beforeAll(async () => {
   // The real server app (auth/admin/stats wired in app.ts since CR-010), with in-memory stores.
   const { buildApp } = await import('../../server/src/app');
-  const { InMemorySubmissionRepository } = await import('../../server/src/modules/submissions/in-memory-submission.repository');
+  const { InMemorySubmissionRepository } =
+    await import('../../server/src/modules/submissions/in-memory-submission.repository');
   const { submitCodeSandboxAsync } = await import('../../core/src/sandbox');
   const { SEED_PROBLEMS } = await import('../../server/src/db/seeds/problems-data');
-  const { InMemoryProblemRepository } = await import('../../server/src/modules/problems/in-memory-problem.repository');
+  const { InMemoryProblemRepository } =
+    await import('../../server/src/modules/problems/in-memory-problem.repository');
   const submissions = new InMemorySubmissionRepository();
   // The same 40 problems the app bundles for offline use (and PostgreSQL is seeded with).
-  api = buildApp({ logger: false, submissions, problems: new InMemoryProblemRepository(SEED_PROBLEMS) });
+  api = buildApp({
+    logger: false,
+    submissions,
+    problems: new InMemoryProblemRepository(SEED_PROBLEMS),
+  });
   api.addHook('onRequest', async (_req, reply) => {
     if (down) await reply.code(503).send({ error: 'DOWN', message: 'offline' });
   });
@@ -37,13 +49,20 @@ test.beforeAll(async () => {
     if (busy) return;
     busy = true;
     for (const s of submissions.all().filter((x) => x.status === 'queued')) {
-      const result = await submitCodeSandboxAsync(SEED_PROBLEMS.find((p) => p.id === s.problemId)!, s.code);
+      const result = await submitCodeSandboxAsync(
+        SEED_PROBLEMS.find((p) => p.id === s.problemId)!,
+        s.code
+      );
       await submissions.save({ ...s, status: 'judged', result, judgedAt: new Date() });
     }
     busy = false;
   }, 200);
   const url = await api.listen({ port: 0, host: '127.0.0.1' });
-  const reg = await fetch(`${url}/api/v1/auth/register`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(USER) });
+  const reg = await fetch(`${url}/api/v1/auth/register`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(USER),
+  });
   expect(reg.status).toBe(201);
 
   // DSA_PACKAGED_APP = path to an installed/packaged binary (e.g. release/mac-arm64/DSA Practice.app/Contents/MacOS/DSA Practice):
@@ -52,8 +71,15 @@ test.beforeAll(async () => {
   // CI containers/runners often lack the setuid sandbox helper; the app's own window sandbox stays on.
   const ciArgs = process.env.CI ? ['--no-sandbox'] : [];
   app = await electron.launch({
-    ...(packaged ? { executablePath: packaged, args: ciArgs } : { args: [path.join(__dirname, '../dist/main.js'), ...ciArgs] }),
-    env: { ...process.env, DSA_API_URL: url, DSA_USER_DATA: fs.mkdtempSync(path.join(os.tmpdir(), 'dsa-desktop-')), DSA_NETWORK_POLL_MS: '300' } as Record<string, string>,
+    ...(packaged
+      ? { executablePath: packaged, args: ciArgs }
+      : { args: [path.join(__dirname, '../dist/main.js'), ...ciArgs] }),
+    env: {
+      ...process.env,
+      DSA_API_URL: url,
+      DSA_USER_DATA: fs.mkdtempSync(path.join(os.tmpdir(), 'dsa-desktop-')),
+      DSA_NETWORK_POLL_MS: '300',
+    } as Record<string, string>,
   });
   win = await app.firstWindow();
   win.on('pageerror', (e) => console.error('renderer error:', e));
@@ -70,7 +96,13 @@ test('logs in online, then practises offline with the local sandbox', async () =
   await expect(win.getByText('● Online')).toBeVisible();
 
   // The window is locked down: no Node in the page, only the typed bridge.
-  expect(await win.evaluate(() => [typeof (globalThis as { require?: unknown }).require, typeof (globalThis as { process?: unknown }).process, typeof (window as { dsaDesktop?: { offline: { run: unknown } } }).dsaDesktop?.offline.run])).toEqual(['undefined', 'undefined', 'function']);
+  expect(
+    await win.evaluate(() => [
+      typeof (globalThis as { require?: unknown }).require,
+      typeof (globalThis as { process?: unknown }).process,
+      typeof (window as { dsaDesktop?: { offline: { run: unknown } } }).dsaDesktop?.offline.run,
+    ])
+  ).toEqual(['undefined', 'undefined', 'function']);
 
   await win.getByLabel('Email').fill(USER.email);
   await win.getByLabel('Password').fill(USER.password);

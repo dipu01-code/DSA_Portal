@@ -2,14 +2,14 @@
 
 ## Candidate approaches compared
 
-| Criterion | child_process | worker_threads | vm (standalone) | isolated-vm |
-|-----------|--------------|----------------|-----------------|-------------|
-| Isolation / security | Separate OS process; can be killed from outside; no shared memory | Same process, separate V8 isolate; `terminate()` available | Same process, same event loop; **not a security boundary** per Node docs | Separate V8 isolate; native addon; not a full OS boundary |
-| Memory limits | `--max-old-space-size` per process | `resourceLimits` (maxOldGenerationSizeMb) | None (inherits parent limit) | `memoryLimit` via isolate config |
-| Timeouts | `execFileSync`/`spawn` timeout kills whole process | `setTimeout` + `worker.terminate()` | None (infinite loop blocks event loop) | None (infinite loop blocks isolate) |
-| Performance | Process spawn overhead per run (~50–150 ms) | Faster spawn (isolate reuse) | Fastest (no spawn) | Fast (isolate reuse) |
-| Windows/macOS/Linux | Excellent (Node core) | Good (Node core, some edge cases) | Excellent (Node core) | Fair (native addon must compile per platform) |
-| Electron compatibility | Excellent (works in main/renderer) | Good (main process; renderer needs `nodeIntegration`/`contextBridge`) | Excellent | Poor (native addon rebuilds for Electron's Node version) |
+| Criterion              | child_process                                                     | worker_threads                                                        | vm (standalone)                                                          | isolated-vm                                               |
+| ---------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------- |
+| Isolation / security   | Separate OS process; can be killed from outside; no shared memory | Same process, separate V8 isolate; `terminate()` available            | Same process, same event loop; **not a security boundary** per Node docs | Separate V8 isolate; native addon; not a full OS boundary |
+| Memory limits          | `--max-old-space-size` per process                                | `resourceLimits` (maxOldGenerationSizeMb)                             | None (inherits parent limit)                                             | `memoryLimit` via isolate config                          |
+| Timeouts               | `execFileSync`/`spawn` timeout kills whole process                | `setTimeout` + `worker.terminate()`                                   | None (infinite loop blocks event loop)                                   | None (infinite loop blocks isolate)                       |
+| Performance            | Process spawn overhead per run (~50–150 ms)                       | Faster spawn (isolate reuse)                                          | Fastest (no spawn)                                                       | Fast (isolate reuse)                                      |
+| Windows/macOS/Linux    | Excellent (Node core)                                             | Good (Node core, some edge cases)                                     | Excellent (Node core)                                                    | Fair (native addon must compile per platform)             |
+| Electron compatibility | Excellent (works in main/renderer)                                | Good (main process; renderer needs `nodeIntegration`/`contextBridge`) | Excellent                                                                | Poor (native addon rebuilds for Electron's Node version)  |
 
 ## Why not the others
 
@@ -28,4 +28,4 @@ Each **submission** runs in its own `child_process` (spawned `node sandbox-exec.
 5. **Node's permission model** (Day 8): the child may read only the wrapper and its own temp dir, and may not write files, spawn processes or start worker threads. The env holds only `PATH`.
 6. One JSON line per finished test, so a crash in test k keeps tests 0…k-1; the rest are marked "Not run".
 
-**Trade-off:** one Node start (~40 ms) per submission. Day 3 started one per *test*, which made Node startup ~95% of judging CPU (see `load-test-report.md`; batching gave 3.7× throughput). Per-test isolation now comes from fresh contexts and V8 timeouts instead of fresh processes. The cost: a memory bomb ends the remaining tests of that one submission (same `error` verdict). Security and portability still win over raw speed; the next step for speed would be a warm pool of children.
+**Trade-off:** one Node start (~40 ms) per submission. Day 3 started one per _test_, which made Node startup ~95% of judging CPU (see `load-test-report.md`; batching gave 3.7× throughput). Per-test isolation now comes from fresh contexts and V8 timeouts instead of fresh processes. The cost: a memory bomb ends the remaining tests of that one submission (same `error` verdict). Security and portability still win over raw speed; the next step for speed would be a warm pool of children.

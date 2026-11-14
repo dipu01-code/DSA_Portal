@@ -1,6 +1,7 @@
 # Handover — Day 5, Person 2
 
 ## What was built
+
 Day 5 — Complete implementation of the offline-first synchronization engine across both server and client layers, verified with an automated convergence test suite.
 
 All work committed to branch `person-2/day-5`.
@@ -10,6 +11,7 @@ All work committed to branch `person-2/day-5`.
 ## 1. Server Sync Module (`/server/src/sync`)
 
 Implemented the central PostgreSQL sync service and Fastify routes:
+
 - **`server/src/sync/sync.service.ts`**:
   - `push(userId, body)`: Ingests batches of up to 100 client operations inside an ACID transaction (`withTransaction`). Implements server-side clock skew guardrails (clamping future timestamps $> 15$ min), updates device registration in `sync_devices`, inserts into `sync_op_log` with `ON CONFLICT (op_id) DO NOTHING`, applies domain mutations (submissions, LWW settings, tombstones), recomputes `user_problem_stats`, and returns acknowledged and duplicate op IDs alongside the latest `serverSeqWatermark`.
   - `pull(userId, query)`: Implements keyset cursor pagination with monotonically increasing `server_seq`. Checks against tombstone retention windows (90 days) and throws `SyncCursorExpiredError` (HTTP 410) if the client cursor has expired.
@@ -24,6 +26,7 @@ Implemented the central PostgreSQL sync service and Fastify routes:
 ## 2. Client Sync Engine (`/core/src/sync`)
 
 Written for Node.js (CLI and Electron) with a pluggable adapter architecture so React Native (Expo) can plug in `expo-sqlite`:
+
 - **`SyncStorageAdapter` & `SqliteSyncStorageAdapter`** (`storage-adapter.ts`):
   - Manages the local SQLite queue (`local_op_log`), status transitions (`pending` $\rightarrow$ `syncing` $\rightarrow$ `synced` / `failed`), retry counters, sync state watermarks (`sync_state`), and domain mutations.
 - **`SyncTransport` & `HttpSyncTransport`** (`transport.ts`):
@@ -48,29 +51,33 @@ const syncEngine = new SyncEngine({
   deviceId: clientDeviceId,
   userId: currentUserId,
   intervalMs: 10000, // Periodic sync interval (10s)
-  batchSize: 50,     // Max ops per batch
-  backoff: { minMs: 1000, maxMs: 30000, factor: 2 }
+  batchSize: 50, // Max ops per batch
+  backoff: { minMs: 1000, maxMs: 30000, factor: 2 },
 });
 ```
 
 ### Methods
-| Method | Signature | Description |
-| :--- | :--- | :--- |
-| `start()` | `(): void` | Starts background sync timer loop and triggers immediate initial sync. |
-| `stop()` | `(): void` | Stops background loop and clears any scheduled retry or interval timers. |
-| `syncNow()` | `(): Promise<SyncResult>` | Forces an immediate one-shot push-then-pull sync cycle. Returns counts of pushed/pulled ops. |
-| `pendingCount()` | `(): Promise<number>` | Returns count of local mutations waiting to be uploaded (`pending` or `failed`). |
-| `onStatus(cb)` | `(cb: (event: SyncStatusEvent) => void): () => void` | Subscribes to status and lifecycle events. Returns unsubscribe function. |
-| `recordMutation()` | `(entity, opType, payload, opId?): Promise<SyncOperation>` | Records an offline mutation with monotonic HLC and persists to SQLite. |
+
+| Method             | Signature                                                  | Description                                                                                  |
+| :----------------- | :--------------------------------------------------------- | :------------------------------------------------------------------------------------------- |
+| `start()`          | `(): void`                                                 | Starts background sync timer loop and triggers immediate initial sync.                       |
+| `stop()`           | `(): void`                                                 | Stops background loop and clears any scheduled retry or interval timers.                     |
+| `syncNow()`        | `(): Promise<SyncResult>`                                  | Forces an immediate one-shot push-then-pull sync cycle. Returns counts of pushed/pulled ops. |
+| `pendingCount()`   | `(): Promise<number>`                                      | Returns count of local mutations waiting to be uploaded (`pending` or `failed`).             |
+| `onStatus(cb)`     | `(cb: (event: SyncStatusEvent) => void): () => void`       | Subscribes to status and lifecycle events. Returns unsubscribe function.                     |
+| `recordMutation()` | `(entity, opType, payload, opId?): Promise<SyncOperation>` | Records an offline mutation with monotonic HLC and persists to SQLite.                       |
 
 ### Status Values for Person 3's UI Component
+
 The `SyncStatus` union represents the state machine:
+
 - **`'idle'`**: Synced and waiting for changes. Display a green checkmark or "Synced".
 - **`'syncing'`**: Currently pushing or pulling batches. Display a spinning sync icon.
 - **`'error'`**: Encountered a network or server error. Engine is backing off exponentially. Display a warning icon with `event.error.message` and a "Retry Now" button calling `syncNow()`.
 - **`'offline'`**: Device has no internet connection (triggered when transport reports network unreachable).
 
 #### React Hook Example for Person 3:
+
 ```tsx
 export function useSyncStatus(engine: SyncEngine) {
   const [status, setStatus] = useState<SyncStatusEvent>({
@@ -95,6 +102,7 @@ export function useSyncStatus(engine: SyncEngine) {
 ## 4. Test Suite (`core/__tests__/sync/sync-engine.test.ts`)
 
 Verified against all 4 required scenarios:
+
 1. **Two devices go offline, make changes, reconnect and converge**:
    - Device A and Device B independently record offline submissions and settings modifications.
    - Both devices reconnect and sync.
@@ -109,6 +117,7 @@ Verified against all 4 required scenarios:
    - Expired cursors trigger `SYNC_CURSOR_EXPIRED`, leading to automatic bootstrap snapshot hydration and cursor reset.
 
 All 40 tests across `@dsa-portal/core` are 100% green:
+
 ```bash
 npx jest core/__tests__/
 # Test Suites: 10 passed, 10 total

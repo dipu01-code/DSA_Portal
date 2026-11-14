@@ -21,7 +21,11 @@ module.exports = {
     '^.+\\.ts$': ['ts-jest', { isolatedModules: true }],
   },
   // Core's own engine. storage/ and sync/ are Person 2's, excluded from core's build until CR-020 lands.
-  collectCoverageFrom: ['<rootDir>/core/src/**/*.ts', '!<rootDir>/core/src/storage/**', '!<rootDir>/core/src/sync/**'],
+  collectCoverageFrom: [
+    '<rootDir>/core/src/**/*.ts',
+    '!<rootDir>/core/src/storage/**',
+    '!<rootDir>/core/src/sync/**',
+  ],
   coverageDirectory: 'coverage',
   coverageThreshold: {
     global: {

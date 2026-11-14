@@ -2,7 +2,10 @@ import type { components, operations } from './schema';
 import type { ApiClient } from './client';
 
 type S = components['schemas'];
-type Json<Op extends keyof operations, Code extends number> = operations[Op]['responses'] extends Record<Code, { content: { 'application/json': infer B } }> ? B : never;
+type Json<Op extends keyof operations, Code extends number> =
+  operations[Op]['responses'] extends Record<Code, { content: { 'application/json': infer B } }>
+    ? B
+    : never;
 
 export type User = S['User'];
 export type TokenPair = S['TokenPair'];
@@ -17,7 +20,11 @@ export type Difficulty = Problem['difficulty'];
 export type Page<T> = { data: T[]; nextCursor: string | null };
 // CR-016 (not in openapi.yaml yet): extra stats fields served by Person 3's stats module.
 export type DifficultyStat = { difficulty: Difficulty; attempted: number; solved: number };
-export type StatsMe = Json<'statsMe', 200> & { streak?: StreakStat; topics?: TopicStat[]; difficulties?: DifficultyStat[] };
+export type StatsMe = Json<'statsMe', 200> & {
+  streak?: StreakStat;
+  topics?: TopicStat[];
+  difficulties?: DifficultyStat[];
+};
 export type StreakDetail = StreakStat & { days: string[] };
 
 /**
@@ -31,14 +38,26 @@ export interface DsaApi {
   logout(): Promise<void>;
   me(): Promise<User>;
   topics(): Promise<string[]>;
-  problems(q?: { topic?: string; difficulty?: Difficulty; cursor?: string; limit?: number }): Promise<Page<ProblemSummary>>;
+  problems(q?: {
+    topic?: string;
+    difficulty?: Difficulty;
+    cursor?: string;
+    limit?: number;
+  }): Promise<Page<ProblemSummary>>;
   randomProblem(q?: { topic?: string; difficulty?: Difficulty }): Promise<Problem>;
   problem(id: string): Promise<Problem>;
   hints(id: string, upto: number): Promise<string[]>;
   solution(id: string): Promise<string>;
-  submit(body: { problemId: string; code: string }, idempotencyKey?: string): Promise<{ submissionId: string; status: string }>;
+  submit(
+    body: { problemId: string; code: string },
+    idempotencyKey?: string
+  ): Promise<{ submissionId: string; status: string }>;
   submission(id: string): Promise<Submission>;
-  submissions(q?: { problemId?: string; cursor?: string; limit?: number }): Promise<Page<Submission>>;
+  submissions(q?: {
+    problemId?: string;
+    cursor?: string;
+    limit?: number;
+  }): Promise<Page<Submission>>;
   stats(): Promise<StatsMe>;
   topicStats(): Promise<TopicStat[]>;
   streak(): Promise<StreakDetail>;
@@ -66,17 +85,29 @@ export function createHttpApi(client: ApiClient): DsaApi {
       }
     },
     me: () => request('GET', `${V1}/auth/me`),
-    topics: async () => (await request<{ topics: string[] }>('GET', `${V1}/topics`, { auth: false })).topics,
+    topics: async () =>
+      (await request<{ topics: string[] }>('GET', `${V1}/topics`, { auth: false })).topics,
     problems: (query) => request('GET', `${V1}/problems`, { query }),
     randomProblem: (query) => request('GET', `${V1}/problems/random`, { query }),
     problem: (id) => request('GET', `${V1}/problems/${enc(id)}`),
-    hints: async (id, upto) => (await request<{ hints: string[] }>('GET', `${V1}/problems/${enc(id)}/hints`, { query: { upto } })).hints,
-    solution: async (id) => (await request<{ solution: string }>('GET', `${V1}/problems/${enc(id)}/solution`)).solution,
-    submit: (body, key) => request('POST', `${V1}/submissions`, { body, headers: key ? { 'idempotency-key': key } : {} }),
+    hints: async (id, upto) =>
+      (
+        await request<{ hints: string[] }>('GET', `${V1}/problems/${enc(id)}/hints`, {
+          query: { upto },
+        })
+      ).hints,
+    solution: async (id) =>
+      (await request<{ solution: string }>('GET', `${V1}/problems/${enc(id)}/solution`)).solution,
+    submit: (body, key) =>
+      request('POST', `${V1}/submissions`, {
+        body,
+        headers: key ? { 'idempotency-key': key } : {},
+      }),
     submission: (id) => request('GET', `${V1}/submissions/${enc(id)}`),
     submissions: (query) => request('GET', `${V1}/submissions`, { query }),
     stats: () => request('GET', `${V1}/stats/me`),
-    topicStats: async () => (await request<{ topics: TopicStat[] }>('GET', `${V1}/stats/me/topics`)).topics,
+    topicStats: async () =>
+      (await request<{ topics: TopicStat[] }>('GET', `${V1}/stats/me/topics`)).topics,
     streak: () => request('GET', `${V1}/stats/me/streak`),
     leaderboard: (query) => request('GET', `${V1}/leaderboard`, { query }),
     dailyChallenge: () => request('GET', `${V1}/daily-challenge`),

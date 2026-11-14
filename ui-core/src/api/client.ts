@@ -82,9 +82,19 @@ export function createApiClient(cfg: ApiClientConfig) {
     const requestId = res.headers.get('x-request-id') ?? undefined;
     try {
       const body = await res.json();
-      return new ApiError(res.status, body.error ?? 'HTTP_ERROR', body.message ?? res.statusText, requestId);
+      return new ApiError(
+        res.status,
+        body.error ?? 'HTTP_ERROR',
+        body.message ?? res.statusText,
+        requestId
+      );
     } catch {
-      return new ApiError(res.status, 'HTTP_ERROR', res.statusText || `HTTP ${res.status}`, requestId);
+      return new ApiError(
+        res.status,
+        'HTTP_ERROR',
+        res.statusText || `HTTP ${res.status}`,
+        requestId
+      );
     }
   }
 
@@ -94,13 +104,19 @@ export function createApiClient(cfg: ApiClientConfig) {
       let res: Response;
       try {
         res = await send(method, path, o);
-        if (res.status === 401 && o.auth !== false && (await refreshOnce())) res = await send(method, path, o);
+        if (res.status === 401 && o.auth !== false && (await refreshOnce())) {
+          res = await send(method, path, o);
+        }
       } catch (err) {
         if (attempt < attempts) {
           await sleep(backoff(attempt));
           continue;
         }
-        throw new ApiError(0, 'NETWORK_ERROR', err instanceof Error ? err.message : 'Network request failed');
+        throw new ApiError(
+          0,
+          'NETWORK_ERROR',
+          err instanceof Error ? err.message : 'Network request failed'
+        );
       }
       if (RETRYABLE.has(res.status) && attempt < attempts) {
         await sleep(backoff(attempt));

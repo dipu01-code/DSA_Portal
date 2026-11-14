@@ -14,16 +14,16 @@ with generated client).
 
 ### Comparison
 
-| Criterion | node-pg-migrate | Prisma |
-|-----------|----------------|--------|
-| SQL control | Full — write raw DDL | Prisma schema DSL → generated SQL |
-| Lock safety | Manual `CREATE INDEX CONCURRENTLY` | No concurrent index support |
-| Enum handling | Native `CREATE TYPE ... AS ENUM` | Limited `ALTER TYPE ... ADD VALUE` support |
-| Runtime dependency | Tiny (~pg driver only) | Heavy (@prisma/client + query engine binary ~15 MB) |
-| Learning curve | Low (just SQL) | Medium (schema DSL + client API + introspection flow) |
-| Type safety at query time | Manual or via code-gen (e.g. pgtyped) | Excellent auto-generated TypeScript types |
-| Team fit | Person 2 writes SQL; Person 1/3 consume repository interfaces | All 3 persons would need to learn Prisma DSL |
-| Viva readiness | "We wrote the SQL ourselves" | "Prisma generated it for us" |
+| Criterion                 | node-pg-migrate                                               | Prisma                                                |
+| ------------------------- | ------------------------------------------------------------- | ----------------------------------------------------- |
+| SQL control               | Full — write raw DDL                                          | Prisma schema DSL → generated SQL                     |
+| Lock safety               | Manual `CREATE INDEX CONCURRENTLY`                            | No concurrent index support                           |
+| Enum handling             | Native `CREATE TYPE ... AS ENUM`                              | Limited `ALTER TYPE ... ADD VALUE` support            |
+| Runtime dependency        | Tiny (~pg driver only)                                        | Heavy (@prisma/client + query engine binary ~15 MB)   |
+| Learning curve            | Low (just SQL)                                                | Medium (schema DSL + client API + introspection flow) |
+| Type safety at query time | Manual or via code-gen (e.g. pgtyped)                         | Excellent auto-generated TypeScript types             |
+| Team fit                  | Person 2 writes SQL; Person 1/3 consume repository interfaces | All 3 persons would need to learn Prisma DSL          |
+| Viva readiness            | "We wrote the SQL ourselves"                                  | "Prisma generated it for us"                          |
 
 ### Decision
 
@@ -70,12 +70,12 @@ submissions. We need a consistent ID strategy that works across the DB, API, and
 
 ### Decision
 
-| Entity | PK type | Additional |
-|--------|---------|------------|
-| `users` | `UUID` (`gen_random_uuid()`) | — |
-| `problems` | `UUID` PK + `slug TEXT UNIQUE` | API routes accept slug in URL paths; all FK references use UUID |
-| `submissions` | `UUID` (`gen_random_uuid()`) | — |
-| All other tables | `UUID` (`gen_random_uuid()`) | Except `daily_challenges` (DATE PK) and `audit_log` (BIGINT IDENTITY) |
+| Entity           | PK type                        | Additional                                                            |
+| ---------------- | ------------------------------ | --------------------------------------------------------------------- |
+| `users`          | `UUID` (`gen_random_uuid()`)   | —                                                                     |
+| `problems`       | `UUID` PK + `slug TEXT UNIQUE` | API routes accept slug in URL paths; all FK references use UUID       |
+| `submissions`    | `UUID` (`gen_random_uuid()`)   | —                                                                     |
+| All other tables | `UUID` (`gen_random_uuid()`)   | Except `daily_challenges` (DATE PK) and `audit_log` (BIGINT IDENTITY) |
 
 ### Rationale
 

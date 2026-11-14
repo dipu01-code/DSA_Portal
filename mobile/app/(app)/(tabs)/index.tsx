@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
-import { useDsa, useProblem, useSync, type Difficulty, type ProblemSummary } from '@dsa-portal/ui-core';
+import {
+  useDsa,
+  useProblem,
+  useSync,
+  type Difficulty,
+  type ProblemSummary,
+} from '@dsa-portal/ui-core';
 import { Body, Button, Card, Chip, ErrorText, H1, H2 } from '../../../src/components/ui';
 import { DailyChallengeCard } from '../../../src/components/DailyChallengeCard';
 import { useTheme } from '../../../src/theme';
@@ -25,7 +31,10 @@ export default function Practice() {
   // Offline: list what is on this phone (problems opened before), filtered like the picker.
   useEffect(() => {
     if (online) return setSaved(null);
-    api.problems({ topic: topic ?? undefined, difficulty: difficulty ?? undefined }).then((p) => setSaved(p.data), () => setSaved([]));
+    api.problems({ topic: topic ?? undefined, difficulty: difficulty ?? undefined }).then(
+      (p) => setSaved(p.data),
+      () => setSaved([])
+    );
   }, [api, online, topic, difficulty]);
 
   const start = async () => {
@@ -35,20 +44,54 @@ export default function Practice() {
   };
 
   return (
-    <ScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={{ padding: space.lg, maxWidth: 720, width: '100%', alignSelf: 'center' }}>
+    <ScrollView
+      style={{ backgroundColor: c.bg }}
+      contentContainerStyle={{
+        padding: space.lg,
+        maxWidth: 720,
+        width: '100%',
+        alignSelf: 'center',
+      }}
+    >
       <DailyChallengeCard />
       <Card>
         <H1>Practice</H1>
         <Body muted>Pick a topic and difficulty and get a random problem.</Body>
         <H2>Topic</H2>
         {topicsError && <ErrorText>{topicsError}</ErrorText>}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }} accessibilityRole="radiogroup" accessibilityLabel="Topic">
-          <Chip label="Any" selected={topic === null} onPress={() => setFilters(null, difficulty)} />
-          {topics.map((t) => <Chip key={t} label={t} selected={topic === t} onPress={() => setFilters(t, difficulty)} />)}
+        <View
+          style={{ flexDirection: 'row', flexWrap: 'wrap' }}
+          accessibilityRole="radiogroup"
+          accessibilityLabel="Topic"
+        >
+          <Chip
+            label="Any"
+            selected={topic === null}
+            onPress={() => setFilters(null, difficulty)}
+          />
+          {topics.map((t) => (
+            <Chip
+              key={t}
+              label={t}
+              selected={topic === t}
+              onPress={() => setFilters(t, difficulty)}
+            />
+          ))}
         </View>
         <H2>Difficulty</H2>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }} accessibilityRole="radiogroup" accessibilityLabel="Difficulty">
-          {DIFFICULTIES.map((d) => <Chip key={d ?? 'any'} label={d ?? 'Any'} selected={difficulty === d} onPress={() => setFilters(topic, d)} />)}
+        <View
+          style={{ flexDirection: 'row', flexWrap: 'wrap' }}
+          accessibilityRole="radiogroup"
+          accessibilityLabel="Difficulty"
+        >
+          {DIFFICULTIES.map((d) => (
+            <Chip
+              key={d ?? 'any'}
+              label={d ?? 'Any'}
+              selected={difficulty === d}
+              onPress={() => setFilters(topic, d)}
+            />
+          ))}
         </View>
         {error && <ErrorText>{error}</ErrorText>}
         <View style={{ marginTop: space.lg }}>
@@ -58,10 +101,17 @@ export default function Practice() {
       {saved && (
         <Card>
           <H2>On this phone</H2>
-          {saved.length === 0 && <Body muted>No saved problems match. Problems you open while online are kept for offline reading.</Body>}
+          {saved.length === 0 && (
+            <Body muted>
+              No saved problems match. Problems you open while online are kept for offline reading.
+            </Body>
+          )}
           {saved.map((p) => (
             <View key={p.id} style={{ marginBottom: space.sm }}>
-              <Button title={`${p.title} · ${p.difficulty}`} onPress={() => router.push(`/problem/${encodeURIComponent(p.id)}`)} />
+              <Button
+                title={`${p.title} · ${p.difficulty}`}
+                onPress={() => router.push(`/problem/${encodeURIComponent(p.id)}`)}
+              />
             </View>
           ))}
         </Card>

@@ -1,6 +1,13 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
-import { createDsa, DsaProvider, ApiError, type DsaApi, type Problem, type Submission } from '@dsa-portal/ui-core';
+import {
+  createDsa,
+  DsaProvider,
+  ApiError,
+  type DsaApi,
+  type Problem,
+  type Submission,
+} from '@dsa-portal/ui-core';
 import Login from '../app/login';
 import Practice from '../app/(app)/(tabs)/index';
 import ProblemScreen from '../app/(app)/problem/[id]';
@@ -21,38 +28,90 @@ jest.mock('expo-router', () => ({
 }));
 
 const problem: Problem = {
-  id: 'two-sum', title: 'Two Sum', topic: 'Arrays', difficulty: 'Easy', description: 'Find two numbers.',
-  starterCode: 'function solve(input) {\n}\n', testCases: [{ input: '{"nums":[2,7],"target":9}', expected: '[0,1]' }],
-  hints: ['Use a map', 'One pass'], solution: '',
+  id: 'two-sum',
+  title: 'Two Sum',
+  topic: 'Arrays',
+  difficulty: 'Easy',
+  description: 'Find two numbers.',
+  starterCode: 'function solve(input) {\n}\n',
+  testCases: [{ input: '{"nums":[2,7],"target":9}', expected: '[0,1]' }],
+  hints: ['Use a map', 'One pass'],
+  solution: '',
 };
 const judged = (passed: number): Submission => ({
-  id: 's1', problemId: 'two-sum', userId: 'u', status: 'judged', passed, total: 1, createdAt: new Date().toISOString(), judgedAt: new Date().toISOString(),
-  results: [{ testCaseIndex: 0, passed: passed === 1, actual: passed ? '[0,1]' : '[]', expected: '[0,1]' }],
+  id: 's1',
+  problemId: 'two-sum',
+  userId: 'u',
+  status: 'judged',
+  passed,
+  total: 1,
+  createdAt: new Date().toISOString(),
+  judgedAt: new Date().toISOString(),
+  results: [
+    { testCaseIndex: 0, passed: passed === 1, actual: passed ? '[0,1]' : '[]', expected: '[0,1]' },
+  ],
 });
 
 /** The real ui-core stores on top of a fake API: screens are tested exactly as they run. */
-function setup(overrides: Partial<DsaApi> = {}, extra: Partial<Parameters<typeof createDsa>[0]> = {}) {
+function setup(
+  overrides: Partial<DsaApi> = {},
+  extra: Partial<Parameters<typeof createDsa>[0]> = {}
+) {
   let polls = 0;
   const api = {
     login: jest.fn(async ({ password }: { password: string }) => {
-      if (password !== 'right-pass-1') throw new ApiError(401, 'UNAUTHORIZED', 'Invalid email or password');
+      if (password !== 'right-pass-1')
+        throw new ApiError(401, 'UNAUTHORIZED', 'Invalid email or password');
       return { accessToken: 'a', refreshToken: 'r', expiresIn: 900 };
     }),
-    me: async () => ({ id: 'u', username: 'mia', email: 'mia@x.io', role: 'user' as const, createdAt: '' }),
+    me: async () => ({
+      id: 'u',
+      username: 'mia',
+      email: 'mia@x.io',
+      role: 'user' as const,
+      createdAt: '',
+    }),
     topics: async () => ['Arrays', 'Graphs'],
     randomProblem: jest.fn(async () => problem),
     problem: async () => problem,
     hints: async (_id: string, upto: number) => problem.hints.slice(0, upto),
-    solution: async () => { throw new ApiError(403, 'SOLUTION_LOCKED', 'locked'); },
+    solution: async () => {
+      throw new ApiError(403, 'SOLUTION_LOCKED', 'locked');
+    },
     submit: jest.fn(async () => ({ submissionId: 's1', status: 'queued' })),
-    submission: async () => (polls++ === 0 ? { ...judged(0), status: 'queued' as const } : judged(1)),
-    leaderboard: async () => ({ data: [{ userId: 'x', username: 'ada', solved: 9, totalScore: 20, rank: 1 }, { userId: 'u', username: 'mia', solved: 1, totalScore: 1, rank: 2 }], nextCursor: null }),
+    submission: async () =>
+      polls++ === 0 ? { ...judged(0), status: 'queued' as const } : judged(1),
+    leaderboard: async () => ({
+      data: [
+        { userId: 'x', username: 'ada', solved: 9, totalScore: 20, rank: 1 },
+        { userId: 'u', username: 'mia', solved: 1, totalScore: 1, rank: 2 },
+      ],
+      nextCursor: null,
+    }),
     dailyChallenge: async () => ({ date: '2026-11-13', problemId: 'two-sum', problem }),
-    stats: async () => ({ attempted: 1, solved: 1, totalProblems: 40, topics: [{ topic: 'Arrays', attempted: 1, solved: 1 }], difficulties: [{ difficulty: 'Easy' as const, attempted: 1, solved: 1 }], streak: { currentStreak: 2, longestStreak: 4, lastSolvedAt: null } }),
-    streak: async () => ({ currentStreak: 2, longestStreak: 4, lastSolvedAt: null, days: ['2026-11-12'] }),
+    stats: async () => ({
+      attempted: 1,
+      solved: 1,
+      totalProblems: 40,
+      topics: [{ topic: 'Arrays', attempted: 1, solved: 1 }],
+      difficulties: [{ difficulty: 'Easy' as const, attempted: 1, solved: 1 }],
+      streak: { currentStreak: 2, longestStreak: 4, lastSolvedAt: null },
+    }),
+    streak: async () => ({
+      currentStreak: 2,
+      longestStreak: 4,
+      lastSolvedAt: null,
+      days: ['2026-11-12'],
+    }),
     ...overrides,
   } as unknown as DsaApi;
-  const dsa = createDsa({ baseUrl: 'http://api.test', refresh: async () => null, wrapApi: () => api, pollMs: 1, ...extra });
+  const dsa = createDsa({
+    baseUrl: 'http://api.test',
+    refresh: async () => null,
+    wrapApi: () => api,
+    pollMs: 1,
+    ...extra,
+  });
   const ui = (el: React.ReactElement) => render(<DsaProvider value={dsa}>{el}</DsaProvider>);
   return { dsa, api, ui };
 }
@@ -90,19 +149,28 @@ describe('Problem screen', () => {
     ui(<ProblemScreen />);
     const editor = await screen.findByLabelText('Code editor');
     fireEvent.changeText(editor, 'function solve({ nums }) { return “x”; }');
-    expect(screen.getByLabelText('Code editor').props.value).toBe('function solve({ nums }) { return "x"; }');
-    fireEvent(screen.getByLabelText('Code editor'), 'selectionChange', { nativeEvent: { selection: { start: 0, end: 0 } } });
+    expect(screen.getByLabelText('Code editor').props.value).toBe(
+      'function solve({ nums }) { return "x"; }'
+    );
+    fireEvent(screen.getByLabelText('Code editor'), 'selectionChange', {
+      nativeEvent: { selection: { start: 0, end: 0 } },
+    });
     fireEvent.press(screen.getByRole('button', { name: 'Indent' }));
     expect(screen.getByLabelText('Code editor').props.value.startsWith('  function')).toBe(true);
 
     fireEvent.press(screen.getByRole('button', { name: 'Submit' }));
     expect(await screen.findByText('Accepted · 1/1 passed')).toBeTruthy();
-    expect(api.submit).toHaveBeenCalledWith({ problemId: 'two-sum', code: expect.stringContaining('function solve') }, expect.any(String));
+    expect(api.submit).toHaveBeenCalledWith(
+      { problemId: 'two-sum', code: expect.stringContaining('function solve') },
+      expect.any(String)
+    );
   });
 
   it('reveals hints one by one and confirms before the (locked) solution', async () => {
     const { ui } = setup();
-    const alert = jest.spyOn(Alert, 'alert').mockImplementation((_t, _m, buttons) => buttons?.[1]?.onPress?.());
+    const alert = jest
+      .spyOn(Alert, 'alert')
+      .mockImplementation((_t, _m, buttons) => buttons?.[1]?.onPress?.());
     ui(<ProblemScreen />);
     fireEvent.press(await screen.findByRole('button', { name: 'Show hint 1 of 2' }));
     expect(await screen.findByText('1. Use a map')).toBeTruthy();
@@ -141,9 +209,17 @@ describe('Stats screen', () => {
   });
 
   it('shows an error with a retry', async () => {
-    const { ui } = setup({ stats: async () => { throw new ApiError(0, 'NETWORK_ERROR', 'Network request failed'); } });
+    const { ui } = setup({
+      stats: async () => {
+        throw new ApiError(0, 'NETWORK_ERROR', 'Network request failed');
+      },
+    });
     ui(<Stats />);
-    expect(await screen.findByText('Could not load your stats: No connection to the server. Check your network and try again.')).toBeTruthy();
+    expect(
+      await screen.findByText(
+        'Could not load your stats: No connection to the server. Check your network and try again.'
+      )
+    ).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
   });
 });
@@ -161,7 +237,9 @@ describe('Day 8: offline outbox, settings, saved problems', () => {
     await act(() => dsa.stores.sync.getState().syncNow());
     expect(await screen.findByText('Synced · Accepted 1/1')).toBeTruthy();
     screen.unmount();
-    dsa.stores.sync.setState((s) => ({ queue: s.queue.map((q) => ({ ...q, state: 'pending' as const, server: undefined })) }));
+    dsa.stores.sync.setState((s) => ({
+      queue: s.queue.map((q) => ({ ...q, state: 'pending' as const, server: undefined })),
+    }));
 
     ui(<Settings />);
     expect(screen.getByText('Online · 1 queued')).toBeTruthy();
@@ -184,8 +262,19 @@ describe('Day 8: offline outbox, settings, saved problems', () => {
 
   it('lists problems saved on the phone while offline', async () => {
     const network = { isOnline: () => false, subscribe: () => () => {} };
-    const problems = jest.fn(async () => ({ data: [{ id: 'two-sum', title: 'Two Sum', topic: 'Arrays', difficulty: 'Easy' as const }], nextCursor: null }));
-    const { ui } = setup({ problems, dailyChallenge: async () => { throw new ApiError(0, 'NETWORK_ERROR', 'offline'); } }, { network });
+    const problems = jest.fn(async () => ({
+      data: [{ id: 'two-sum', title: 'Two Sum', topic: 'Arrays', difficulty: 'Easy' as const }],
+      nextCursor: null,
+    }));
+    const { ui } = setup(
+      {
+        problems,
+        dailyChallenge: async () => {
+          throw new ApiError(0, 'NETWORK_ERROR', 'offline');
+        },
+      },
+      { network }
+    );
     ui(<Practice />);
     fireEvent.press(await screen.findByRole('button', { name: 'Two Sum · Easy' }));
     expect(mockPush).toHaveBeenCalledWith('/problem/two-sum');

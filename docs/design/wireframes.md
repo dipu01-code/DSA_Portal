@@ -5,6 +5,7 @@ connectivity badge and native menu. Mobile (Expo, Day 6) uses single-column stac
 ✅ = built (Days 3–5), ⏳ = later day.
 
 ## Shared header (web/desktop)
+
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ DSA Practice   Practice  Stats  [Leaderboard⏳]   ● Online   [Theme ▾] [Log out] │
@@ -13,6 +14,7 @@ connectivity badge and native menu. Mobile (Expo, Day 6) uses single-column stac
 ```
 
 ## Login / register ✅
+
 ```
 Web / desktop                               Mobile
 ┌──────────── Sign in ─────────────┐        ┌──────────────┐
@@ -28,6 +30,7 @@ Register: Username, Email, Password + rule text (8–72 chars, letter + digit, n
 ```
 
 ## Topic + difficulty selection ✅ (Cmd/Ctrl+K jumps here)
+
 ```
 ┌────────────── Practice ──────────────┐   ┌─ Daily challenge ⏳ ─┐
 │ Topic       [ Any topic          ▾ ] │   │ Two Sum · Easy       │
@@ -38,6 +41,7 @@ Register: Username, Email, Password + rule text (8–72 chars, letter + digit, n
 ```
 
 ## Problem view + results ✅
+
 ```
 Web / desktop (two columns ≥ 900 px, stacked below)
 ┌───────────── Description ─────────────┐┌──────────────── Editor (Monaco, JS) ───────────────┐
@@ -56,6 +60,7 @@ Mobile: tabs [Problem | Code | Results]; Submit is a sticky bottom button; edito
 ```
 
 ## Stats dashboard ✅
+
 ```
 ┌ Solved 12/40 ┐┌ Attempted 15 ┐┌ Accuracy 80% ┐┌ Streak 3 d (longest 5) ┐
 ┌──────────── By topic (bars: Attempted / Solved, legend, tooltip with accuracy) ────────────┐
@@ -67,12 +72,14 @@ Mobile: tiles 2×2, charts full width, calendar scrolls horizontally.
 ```
 
 ## Leaderboard ⏳ (Day 7)
+
 ```
 ┌ Rank │ User      │ Solved │ Score ┐   your row highlighted; [Load more] (cursor pagination)
 │ 1    │ ada       │ 31     │ 940   │
 ```
 
 ## Settings with sync status ⏳ (Day 8)
+
 ```
 ┌──────────────── Settings ────────────────┐
 │ Theme        (•) System ( ) Light ( ) Dark│   ← theme already in the header (✅)

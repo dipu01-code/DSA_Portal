@@ -43,11 +43,16 @@ async function main() {
   const { SEED_PROBLEMS } = await import('../../server/src/db/seeds/problems-data');
   await migrateUp();
   const problems = new PostgresProblemRepository();
-  if (!(await problems.findById('two-sum'))) await problems.save(SEED_PROBLEMS.find((p) => p.id === 'two-sum')!);
+  if (!(await problems.findById('two-sum'))) {
+    await problems.save(SEED_PROBLEMS.find((p) => p.id === 'two-sum')!);
+  }
 
   // One user per submission, as N people submitting at once (so per-user quotas and limits behave as in production).
   const tag = Date.now().toString(36);
-  const users = Array.from({ length: N }, (_, i) => ({ id: randomUUID(), name: `load_${tag}_${i}` }));
+  const users = Array.from({ length: N }, (_, i) => ({
+    id: randomUUID(),
+    name: `load_${tag}_${i}`,
+  }));
   await pool.query(
     `INSERT INTO users (id, username, email, password_hash)
      SELECT id, name, name || '@load.test', 'x' FROM unnest($1::uuid[], $2::text[]) AS u(id, name)`,
@@ -58,17 +63,42 @@ async function main() {
   const procs: ChildProcess[] = [];
   let log = '';
   const start = (script: string, env: Record<string, string | undefined>) => {
-    const p = spawn(process.execPath, [path.join(ROOT, script)], { env: { PATH: process.env.PATH, DATABASE_URL: DB_URL, ...env } });
+    const p = spawn(process.execPath, [path.join(ROOT, script)], {
+      env: { PATH: process.env.PATH, DATABASE_URL: DB_URL, ...env },
+    });
     p.stdout!.on('data', (d) => (log += d));
     p.stderr!.on('data', (d) => (log += d));
     procs.push(p);
   };
   const port = await freePort();
   const base = `http://127.0.0.1:${port}`;
-  start('server/dist/index.js', { PORT: String(port), JWT_SECRET: SECRET, LOG_LEVEL: 'warn', QUEUE_MAX_WAITING: '100000', RATE_LIMIT_IP_PER_MIN: '100000' });
-  for (let i = 0; i < WORKERS; i++) start('workers/dist/main.js', { WORKER_CONCURRENCY: process.env.WORKER_CONCURRENCY, WORKER_POLL_MS: '500' });
-  for (let i = 0; i < 100 && !(await fetch(`${base}/api/v1/health`).then((r) => r.ok, () => false)); i++) await sleep(100);
-  for (let i = 0; i < 100 && (log.match(/\[worker\] started/g) ?? []).length < WORKERS; i++) await sleep(100);
+  start('server/dist/index.js', {
+    PORT: String(port),
+    JWT_SECRET: SECRET,
+    LOG_LEVEL: 'warn',
+    QUEUE_MAX_WAITING: '100000',
+    RATE_LIMIT_IP_PER_MIN: '100000',
+  });
+  for (let i = 0; i < WORKERS; i++) {
+    start('workers/dist/main.js', {
+      WORKER_CONCURRENCY: process.env.WORKER_CONCURRENCY,
+      WORKER_POLL_MS: '500',
+    });
+  }
+  for (
+    let i = 0;
+    i < 100 &&
+    !(await fetch(`${base}/api/v1/health`).then(
+      (r) => r.ok,
+      () => false
+    ));
+    i++
+  ) {
+    await sleep(100);
+  }
+  for (let i = 0; i < 100 && (log.match(/\[worker\] started/g) ?? []).length < WORKERS; i++) {
+    await sleep(100);
+  }
 
   try {
     const t0 = Date.now();
@@ -80,18 +110,29 @@ async function main() {
         const s = Date.now();
         const res = await fetch(`${base}/api/v1/submissions`, {
           method: 'POST',
-          headers: { authorization: `Bearer ${sign({ sub: u.id })}`, 'content-type': 'application/json' },
+          headers: {
+            authorization: `Bearer ${sign({ sub: u.id })}`,
+            'content-type': 'application/json',
+          },
           body: JSON.stringify({ problemId: 'two-sum', code: TWO_SUM }),
         }).catch(() => null);
         accepted.push(Date.now() - s);
-        if (res?.status === 202) ids.push(((await res.json()) as { submissionId: string }).submissionId);
-        else errors++;
+        if (res?.status === 202) {
+          ids.push(((await res.json()) as { submissionId: string }).submissionId);
+        } else errors++;
       })
     );
 
     const done = async () =>
-      (await pool.query<{ n: number }>(`SELECT count(*)::int AS n FROM submissions WHERE id = ANY($1::uuid[]) AND status IN ('judged', 'failed')`, [ids])).rows[0].n;
-    for (const end = Date.now() + 10 * 60_000; (await done()) < ids.length && Date.now() < end; ) await sleep(250);
+      (
+        await pool.query<{ n: number }>(
+          `SELECT count(*)::int AS n FROM submissions WHERE id = ANY($1::uuid[]) AND status IN ('judged', 'failed')`,
+          [ids]
+        )
+      ).rows[0].n;
+    for (const end = Date.now() + 10 * 60_000; (await done()) < ids.length && Date.now() < end;) {
+      await sleep(250);
+    }
     const wall = (Date.now() - t0) / 1000;
 
     const { rows } = await pool.query<{ ms: number; status: string; passed: boolean }>(
@@ -122,7 +163,9 @@ async function main() {
     );
   } finally {
     for (const p of procs) p.kill('SIGTERM');
-    await Promise.all(procs.map((p) => (p.exitCode === null ? new Promise((res) => p.once('exit', res)) : null)));
+    await Promise.all(
+      procs.map((p) => (p.exitCode === null ? new Promise((res) => p.once('exit', res)) : null))
+    );
     await pool.query('DELETE FROM users WHERE id = ANY($1::uuid[])', [users.map((u) => u.id)]); // cascades
     await closePool();
   }
