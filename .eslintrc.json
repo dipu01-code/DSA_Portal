@@ -28,7 +28,8 @@
     "prettier.config.js",
     "web/public",
     "mobile/index.js",
-    "mobile/plugins"
+    "mobile/plugins",
+    "infra/render"
   ],
   "rules": {
     "no-console": "warn",

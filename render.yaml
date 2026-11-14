@@ -1,4 +1,5 @@
-# Render Blueprint: API + judging worker + PostgreSQL + web app.
+# Render Blueprint, free plan only (no card): PostgreSQL + one web service running the API and the
+# judging worker together (infra/render/start-all.js) + the static web app.
 # Deploy: Render Dashboard → New → Blueprint → pick this repo. Steps and costs: README "Deploy on Render".
 # The two `sync: false` values are asked for once, when the Blueprint is created.
 
@@ -7,19 +8,21 @@ databases:
     databaseName: dsa_portal
     user: dsa_portal
     region: singapore
-    # free: fine for a demo, but Render's free Postgres is time-limited. Use 0.1c-256mb (paid) to keep data.
+    # Render's free Postgres is time-limited (see README); a paid plan keeps the data.
     plan: free
 
 services:
-  # REST API + Socket.IO (server/). Runs pending migrations on every start, then serves.
+  # REST API + Socket.IO (server/) and the judging worker (workers/) in one container: free web services
+  # can't be paired with a background worker. start-all.js migrates, seeds an empty database (no Shell on
+  # the free plan), then runs both; if either stops, the service restarts.
   - type: web
     name: dsa-portal-api
     runtime: docker
     dockerContext: .
     dockerfilePath: ./infra/docker/Dockerfile.server
-    dockerCommand: sh -c "node server/dist/db/migrate.js up && exec node server/dist/index.js"
+    dockerCommand: node start-all.js
     region: singapore
-    # free sleeps after ~15 min idle (first request then takes about a minute). 0.5c-512mb stays awake.
+    # free sleeps after ~15 min idle; the first request then takes about a minute.
     plan: free
     healthCheckPath: /health/ready
     envVars:
@@ -37,26 +40,14 @@ services:
       # The web app's URL, e.g. https://dsa-portal-web.onrender.com (no trailing slash).
       - key: CORS_ORIGINS
         sync: false
-
-  # Judging worker (workers/): claims queued submissions from PostgreSQL and runs them in the sandbox.
-  # Background workers have no free plan on Render.
-  - type: worker
-    name: dsa-portal-worker
-    runtime: docker
-    dockerContext: .
-    dockerfilePath: ./infra/docker/Dockerfile.worker
-    region: singapore
-    plan: 0.5c-512mb
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: DATABASE_URL
-        fromDatabase:
-          name: dsa-portal-db
-          property: connectionString
-      # The default is one loop per host CPU, too many sandboxes for 512 MB.
+      # 512 MB shared by the API, the worker and its sandboxes: one submission judged at a time.
       - key: WORKER_CONCURRENCY
-        value: '2'
+        value: '1'
+      # Two processes share the free database's connection limit.
+      - key: DB_POOL_MAX
+        value: '5'
+      - key: DB_POOL_MIN
+        value: '1'
 
   # React web app (web/), served as a static site from Render's CDN.
   - type: web

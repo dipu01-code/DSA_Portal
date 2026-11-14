@@ -173,27 +173,29 @@ a PostgreSQL service, and builds both Docker images on every push to `main` and 
 
 ### Deploy on Render
 
-[`render.yaml`](render.yaml) is a Render Blueprint that creates everything from this repo: the API (Docker, runs
-migrations on start), the judging worker (Docker), PostgreSQL and the web app (static site on Render's CDN).
-Region: Singapore.
+[`render.yaml`](render.yaml) is a Render Blueprint that uses **free plans only (no card needed)**: PostgreSQL, one
+web service that runs the API and the judging worker together, and the web app as a static site on Render's CDN.
+Region: Singapore. On every start the API service runs [`infra/render/start-all.js`](infra/render/start-all.js),
+which applies pending migrations, seeds the problem bank if the database is empty, then starts the API and the
+worker. If either stops, the service restarts.
 
 1. Sign in at [render.com](https://render.com) with GitHub and allow access to this repository.
-2. **New → Blueprint**, pick the repo; Render reads `render.yaml` and lists the four resources.
+2. **New → Blueprint**, pick the repo; Render reads `render.yaml` and lists the three resources.
 3. Fill in the two prompted values (service URLs are `https://<service-name>.onrender.com`):
    - `CORS_ORIGINS` (API): `https://dsa-portal-web.onrender.com`
    - `VITE_API_URL` (web): `https://dsa-portal-api.onrender.com`
 4. **Apply**. The first build takes several minutes. If Render gives a service a different URL (name taken), update
    both values under the service's **Environment** tab, then redeploy the web app.
-5. Load the problem bank once: open **dsa-portal-worker → Shell** and run `node server/dist/db/seed.js`.
-   It also creates two demo accounts (`admin@dsa.portal`, `student@dsa.portal`, password `password123`);
-   change or delete them before sharing the site.
-6. Open `https://dsa-portal-web.onrender.com`. API docs: `https://dsa-portal-api.onrender.com/docs`.
+5. Open `https://dsa-portal-web.onrender.com`. API docs: `https://dsa-portal-api.onrender.com/docs`.
 
-Costs (check Render's current pricing): the API and web app use free plans. The free API sleeps after about 15
-minutes idle, so the first request then takes about a minute. The worker needs a paid instance (Render has no free
-background workers). The free PostgreSQL is time-limited, so switch `plan` in `render.yaml` to a paid one to keep
-data. Every push to `main` redeploys automatically. Point desktop and mobile builds at the API URL to use the
-same backend.
+The automatic seed also creates two demo accounts (`admin@dsa.portal`, `student@dsa.portal`, password
+`password123`); change or delete them before sharing the site.
+
+Free-plan limits (check Render's current terms): the API sleeps after about 15 minutes idle, so the first request
+then takes about a minute, and submissions are judged only while it is awake. One submission is judged at a time
+(`WORKER_CONCURRENCY=1`, 512 MB). The free PostgreSQL is time-limited; switch its `plan` to a paid one to keep the
+data. Every push to `main` redeploys automatically. Point desktop and mobile builds at the API URL to use the same
+backend.
 
 ### Self-hosted (Docker Compose)
 

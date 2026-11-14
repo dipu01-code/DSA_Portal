@@ -88,9 +88,24 @@ export async function seedDatabase(): Promise<{
   };
 }
 
-// Direct execution
+/**
+ * Seeds only a database with no problems yet (first start of a fresh deployment); null when it skipped.
+ * Hosts without a shell (Render free plan) run this on every start.
+ */
+export async function seedIfEmpty(): Promise<Awaited<ReturnType<typeof seedDatabase>> | null> {
+  const { rows } = await pool.query<{ has: boolean }>(
+    'SELECT EXISTS (SELECT 1 FROM problems) AS has'
+  );
+  if (rows[0].has) {
+    console.log('[Seed] Problems already present, skipping seed.');
+    return null;
+  }
+  return seedDatabase();
+}
+
+// Direct execution: `node seed.js` always seeds (idempotent upserts); `--if-empty` only on a fresh database.
 if (require.main === module) {
-  seedDatabase()
+  (process.argv.includes('--if-empty') ? seedIfEmpty() : seedDatabase())
     .then((result) => {
       console.log('Seed summary:', result);
       return closePool().then(() => process.exit(0));

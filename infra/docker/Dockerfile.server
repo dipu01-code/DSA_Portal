@@ -22,10 +22,12 @@ RUN npm ci
 COPY tsconfig.json ./
 COPY core/ ./core/
 COPY server/ ./server/
+COPY workers/ ./workers/
 
-# Build core and server
+# Build core, server and the worker (the worker runs in this image on single-container hosts, infra/render)
 RUN npm run build -w core
 RUN npm run build -w server
+RUN npm run build -w workers
 
 # Stage 2: Production runner
 FROM base AS runner
@@ -40,6 +42,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY core/package.json ./core/
 COPY server/package.json ./server/
+COPY workers/package.json ./workers/
 
 # Install only production dependencies
 RUN npm ci --omit=dev && npm cache clean --force
@@ -49,6 +52,9 @@ COPY --from=builder /app/core/dist ./core/dist
 # core reads its problem bank from core/problems at import time.
 COPY --from=builder /app/core/problems ./core/problems
 COPY --from=builder /app/server/dist ./server/dist
+COPY --from=builder /app/workers/dist ./workers/dist
+# API + worker in one container (Render free plan); the default CMD below still runs the API alone.
+COPY infra/render/start-all.js ./start-all.js
 # tsc does not copy .sql files; the migrate service runs server/dist/db/migrate.js against these.
 COPY --from=builder /app/server/src/db/migrations ./server/dist/db/migrations
 
