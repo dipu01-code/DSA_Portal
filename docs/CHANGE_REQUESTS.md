@@ -3,6 +3,7 @@
 Log any proposed change to an agreed endpoint, table column, or WebSocket event here before editing. Format:
 
 ## CR-001
+
 - **Proposed by:** Person 1
 - **Field:** /api/v1/problems response shape
 - **Proposed change:** add `description` field
@@ -11,6 +12,7 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
 - **Approved by:** —
 
 ## CR-002
+
 - **Proposed by:** Person 1 (Day 4)
 - **Field:** `GET /api/v1/health`
 - **Proposed change:** add it to openapi.yaml (`200 {status, service}`, no auth).
@@ -19,6 +21,7 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
 - **Approved by:** —
 
 ## CR-003
+
 - **Proposed by:** Person 1 (Day 4)
 - **Field:** responses of `/problems`, `/problems/random`, `/problems/{id}`, `/problems/{id}/hints`, `/problems/{id}/solution`, `GET /submissions`
 - **Proposed change:** document `400 BadRequest` and `401 Unauthorized` (they all require a bearer token and validate query params).
@@ -27,6 +30,7 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
 - **Approved by:** —
 
 ## CR-004
+
 - **Proposed by:** Person 1 (Day 4)
 - **Field:** `Problem` schema used by `GET /problems/random` and `GET /problems/{id}`
 - **Proposed change:** drop `solution` (and later, hidden test cases) from the `Problem` response; keep it only on `GET /problems/{id}/solution`.
@@ -35,6 +39,7 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
 - **Approved by:** —
 
 ## CR-005
+
 - **Proposed by:** Person 1 (Day 5)
 - **Field:** Stack — submission queue
 - **Proposed change:** use the PostgreSQL `submissions` table as the job queue (`FOR UPDATE SKIP LOCKED` + `LISTEN/NOTIFY`) instead of BullMQ + Redis. The old BullMQ worker code and the `bullmq`/`ioredis` dependencies were removed from `/workers`.
@@ -43,6 +48,7 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
 - **Approved by:** Person 1's user (Day 5 session)
 
 ## CR-006
+
 - **Proposed by:** Person 1 (Day 5)
 - **Field:** `POST /api/v1/submissions` in openapi.yaml
 - **Proposed change:** document the optional `Idempotency-Key` request header (1–128 chars, unique per user) and a `409 IDEMPOTENCY_KEY_REUSED` response (same key, different body). A replayed key returns `202` with the original `submissionId` and its current status.
@@ -51,6 +57,7 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
 - **Approved by:** —
 
 ## CR-007
+
 - **Proposed by:** Person 1 (Day 5), **for Person 2** (owner of `/server/src/db`)
 - **Field:** `/server/src/db` and the `submissions` table
 - **Change already made (approved by Person 1's user so Day 5 could run):**
@@ -64,6 +71,7 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
 - **Approved by:** —
 
 ## CR-008
+
 - **Proposed by:** Person 1 (audit after Day 5), **for Person 2**
 - **Changes already made (approved by Person 1's user):**
   1. `infra/docker-compose.yml`: removed the `docker-entrypoint-initdb.d` mount and deleted the duplicate `001_initial_schema.sql`. The init script created the schema without recording it in `_migrations`, so `npm run db:migrate` then crashed ("type user_role already exists") and never applied 002. Setup is now `npm run db:up && npm run db:migrate && npm run db:seed`. `docs/infra/docker.md` updated.
@@ -73,6 +81,7 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
 - **Approved by:** —
 
 ## CR-009
+
 - **Proposed by:** Person 3 (Day 1), **for Person 2**
 - **Field:** `UserRepository` (core) / `PostgresUserRepository`
 - **Proposed change:** none required now. FYI: core's `UserRepository` has no `findByEmail`, no password hash and no sessions, so auth uses its own `AuthStore` interface in `server/src/modules/auth/store.ts` (`InMemoryAuthStore` + `PostgresAuthStore`, which reads/writes the existing `users` and `sessions` tables; columns unchanged). If you prefer all SQL under `/server/src/db`, move `PostgresAuthStore` there and I'll import it.
@@ -80,6 +89,7 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
 - **Approved by:** —
 
 ## CR-010
+
 - **Proposed by:** Person 3 (Day 3), **for Person 1** (owner of `server/src/app.ts`, `server/src/index.ts`, `/workers`)
 - **Field:** route wiring only, no endpoint change
 - **Proposed change:** in `app.ts`:
@@ -93,6 +103,7 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
 - **Approved by:** —
 
 ## CR-011
+
 - **Proposed by:** Person 3 (Day 1), **for Person 2**
 - **Field:** `StatsRepository.getUserStats()` return shape (core)
 - **Proposed change:** return `streak: { currentStreak, longestStreak, lastSolvedAt }` (the spec's `StreakStat`) instead of `streak: number`.
@@ -102,6 +113,7 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
 - **Approved by:** —
 
 ## CR-012
+
 - **Proposed by:** Person 3 (Day 1), **for Person 2**
 - **Field:** `server/src/db/seed.ts` dev password hash
 - **Proposed change:** replace `$2b$10$wO3P6P6E0.0eK3.yF8iUSeVqjYh4c9qK2M5A1hU6d2Y/F4kH6v6y.` with `$2a$10$iBVruH6tb4eMv2wF.RPFT.XkkhjjPIQ/wpSU2mR.2VuHIDY8E1T2y`.
@@ -110,6 +122,7 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
 - **Approved by:** —
 
 ## CR-013
+
 - **Proposed by:** Person 3 (Day 1), **for Person 1** (openapi owner)
 - **Field:** `POST /api/v1/auth/refresh` and `/auth/logout`
 - **Proposed change:** also accept `{ "refreshToken": "..." }` in the JSON body when there is no `refresh_token` cookie.
@@ -119,14 +132,16 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
 - **Approved by:** —
 
 ## CR-014
+
 - **Proposed by:** Person 3 (Day 3), **for Person 2**
 - **Field:** `sessions` table
 - **Proposed change:** add `revoked_at TIMESTAMPTZ NULL` and `family_id UUID NOT NULL` (one family per login).
-- **Reason:** refresh rotation with reuse detection is implemented today without a schema change: a rotated session keeps its row with `expires_at = 'epoch'`, and presenting it again revokes all of the user's sessions. That works, but (1) a cleanup job deleting expired rows also forgets rotated ones, and (2) reuse revokes *every* device instead of only the stolen family. With the two columns, `PostgresAuthStore.consumeSession` changes in one place.
+- **Reason:** refresh rotation with reuse detection is implemented today without a schema change: a rotated session keeps its row with `expires_at = 'epoch'`, and presenting it again revokes all of the user's sessions. That works, but (1) a cleanup job deleting expired rows also forgets rotated ones, and (2) reuse revokes _every_ device instead of only the stolen family. With the two columns, `PostgresAuthStore.consumeSession` changes in one place.
 - **Status:** pending
 - **Approved by:** —
 
 ## CR-015
+
 - **Proposed by:** Person 3 (Day 3), **for Person 1** (core `ProblemRepository`) and **Person 2** (`PostgresProblemRepository`)
 - **Field:** `ProblemRepository` interface
 - **Proposed change:** add `delete(id): Promise<boolean>` (soft delete: `is_published = false`), and make `findById` skip unpublished problems for non-admin reads.
@@ -135,6 +150,7 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
 - **Approved by:** —
 
 ## CR-016
+
 - **Proposed by:** Person 3 (Day 4), **for Person 1** (openapi owner)
 - **Field:** stats endpoints in `openapi.yaml`
 - **Proposed change (already served by the stats module, additive only):**
@@ -146,6 +162,7 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
 - **Approved by:** —
 
 ## CR-017
+
 - **Proposed by:** Person 3 (Day 4), **for Person 2**
 - **Field:** `PostgresSubmissionRepository.save()`
 - **Proposed change:** replace the inline `user_problem_stats` upsert with `await updateStatsOnSubmission(client, submission)` from `server/src/modules/stats/stats.service.ts` (same SQL, same transaction).
@@ -154,6 +171,7 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
 - **Approved by:** —
 
 ## CR-018
+
 - **Proposed by:** Person 3 (Day 5), **for Person 1** (`/core`)
 - **Field:** `SandboxOptions` in `core/src/sandbox.ts`
 - **Proposed change:** optional `nodePath?: string` and `extraEnv?: Record<string, string>` used by `childCommand` instead of the hard-coded `'node'` from `PATH`.
@@ -162,6 +180,7 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
 - **Approved by:** —
 
 ## CR-019
+
 - **Proposed by:** Person 1 (Day 6), **for Person 2** (owner of `/server/src/db`) and **for Person 3** (API additions)
 - **Changes already made (approved by Person 1's user), so the queue can retry, recover stalled jobs and dead-letter:**
   1. New migration `server/src/db/migrations/003_queue_reliability` (up + down, checked both ways): `submissions.attempts`, `run_after`, `lock_token`, `locked_until`, `last_error`; partial indexes on `running` rows (lease) and `failed` rows (dead-letter list). The `submissions_notify_queued` trigger now also fires on `UPDATE OF status` to `queued` (retries, requeue). No existing column changed. `PostgresSubmissionRepository` is unchanged and ignores the new columns.
@@ -171,14 +190,16 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
 - **Approved by:** —
 
 ## CR-020
+
 - **Proposed by:** Person 1 (Day 6), **for Person 2**
 - **Problem:** `main` did not build after PR #7/#8. `core/src/storage/repositories/sqlite-submission.repository.ts` uses `result.passed/total/results`, which don't exist on core's `ExecutionResult` (same issue CR-007 fixed for PostgreSQL), and lacks `findByIdempotencyKey`. `core/src/sync/__tests__/hlc.test.ts:56` also fails to type-check. `server/src/db/repositories/audit.repository.ts` imported `AuditRepository`/`AuditEntry` from `@dsa-portal/core`, which did not export them.
 - **Changes already made (Person 1's files only):** `core/src/index.ts` now re-exports the `AuditEntry` and `AuditRepository` types (type-only, so SQLite never loads in the server). `core/tsconfig.json` excludes `src/storage` and `src/sync` from core's build (nothing imports them yet), so `npm run build` is green again.
 - **Proposed change (Person 2):** fix the SQLite submission repository to the `{ status, perTest }` shape, add `findByIdempotencyKey`, fix the HLC test, then remove the two excludes in `core/tsconfig.json`. Also, `npx eslint` reports an unused `PoolClient` import in `submission.repository.ts:1` (the only lint error in the repo).
-- **Status:** pending
+- **Status:** done (final scan): SQLite repository fixed for the current types, `core/tsconfig.json` excludes removed; core builds storage + sync
 - **Approved by:** —
 
 ## CR-021
+
 - **Proposed by:** Person 1 (Day 7), **for the team** (stack decision) and **Person 2** (migration in `/server/src/db`)
 - **Proposed change:** Day 7 without Redis or BullMQ, continuing CR-005:
   1. **Socket.IO fan-out over PostgreSQL `LISTEN/NOTIFY`, not Redis pub/sub + the Socket.IO Redis adapter.** Triggers (migration `005_realtime_events`, up + down, checked both ways) `pg_notify('dsa_events', …)` on every submission status change, on a fully passing submission (`leaderboard:updated`) and on a new `daily_challenges` row (`daily:new`). Each API instance LISTENs and emits to its own sockets, so several instances work. Also adds a partial index for the leaderboard on `user_problem_stats (first_solved_at) WHERE solved`. No existing column changed.
@@ -189,6 +210,7 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
 - **Approved by:** —
 
 ## CR-022
+
 - **Proposed by:** Person 1 (Day 7), **for Person 3**
 - **Context:** Person 3's fork (`ansarimehran24/DSA_Portal`, commit `b2e822a` and its siblings, not merged) adds its own `server/src/modules/{leaderboard,daily}/routes.ts` and edits `server/src/app.ts`, `server/src/index.ts` and `workers/src/main.ts`, which are Person 1's files. Person 1's Day 7 implementation of the same endpoints and of the socket gateway is now on `main` (CR-021).
 - **Proposed change (before Person 3 merges their Day 7):**
@@ -201,6 +223,7 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
 - **Approved by:** —
 
 ## CR-023
+
 - **Proposed by:** Person 1 (Day 8), **for Person 2 and Person 3** (FYI: additive API behaviour + server dependency upgrade)
 - **Changes already made (Person 1's files):**
   1. **New 4xx responses, same `Error` body:** any route may return `429 RATE_LIMITED` (per IP 300/min, per signed-in user 120/min) and `413 PAYLOAD_TOO_LARGE` (body > 512 KiB). `POST /submissions` may return `429 QUOTA_EXCEEDED` (per user 10/min, 500/day). Every 429 has `Retry-After`. Code with a NUL character is now a `400 VALIDATION_ERROR` (was a 500 from PostgreSQL). Documented in `openapi.yaml`. No endpoint, field or event changed.
@@ -212,27 +235,29 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
 - **Approved by:** —
 
 ## CR-024
+
 - **Proposed by:** Person 1 (Day 8), **for Person 2** (owner of `/infra` and docker files)
 - **Proposed change:** run the worker with reduced privileges and hard resource limits. There's no worker image yet; when you add the API and worker services to `infra/docker-compose.yml`, please use this for the worker:
   ```yaml
   worker:
-    build: { context: .., dockerfile: infra/Dockerfile.worker }   # FROM node:20-alpine … USER node
+    build: { context: .., dockerfile: infra/Dockerfile.worker } # FROM node:20-alpine … USER node
     command: node workers/dist/main.js
-    user: "node"                 # never root
-    read_only: true              # sandbox writes only to /tmp
-    tmpfs: ["/tmp:size=64m,mode=1777"]
-    cap_drop: ["ALL"]
-    security_opt: ["no-new-privileges:true"]
-    pids_limit: 128              # WORKER_CONCURRENCY × 1 child + headroom; stops fork bombs at the kernel
-    mem_limit: 512m              # children are capped at 64 MB each by --max-old-space-size
-    cpus: "1.0"
-    environment: [DATABASE_URL, WORKER_CONCURRENCY, WORKER_METRICS_PORT]   # NOT JWT_SECRET: the worker doesn't need it
+    user: 'node' # never root
+    read_only: true # sandbox writes only to /tmp
+    tmpfs: ['/tmp:size=64m,mode=1777']
+    cap_drop: ['ALL']
+    security_opt: ['no-new-privileges:true']
+    pids_limit: 128 # WORKER_CONCURRENCY × 1 child + headroom; stops fork bombs at the kernel
+    mem_limit: 512m # children are capped at 64 MB each by --max-old-space-size
+    cpus: '1.0'
+    environment: [DATABASE_URL, WORKER_CONCURRENCY, WORKER_METRICS_PORT] # NOT JWT_SECRET: the worker doesn't need it
   ```
   Inside it, each sandbox child already runs under Node's permission model (no fs writes, reads only its own temp dir, no child processes or worker threads) with a 64 MB heap, a 2 s per-test timeout and an env with only `PATH`.
 - **Status:** pending
 - **Approved by:** —
 
 ## CR-025
+
 - **Proposed by:** Person 1 (Day 8), **for Person 3** (owner of `/web`, `/mobile`)
 - **Context:** after Day 8's server fixes, the remaining `npm audit --omit=dev` findings (50: 1 critical, 21 high) are all in client toolchains, except zod (mitigated by the 512 KiB body limit). Full table in `docs/threat-model.md`.
 - **Proposed change:**
@@ -243,6 +268,7 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
 - **Approved by:** —
 
 ## CR-026
+
 - **Proposed by:** Person 1 (Day 9), **for Person 2** (owner of `/.github`)
 - **Proposed change:** add CI so the Day 9 full-flow test (`workers/__tests__/full-flow.e2e.test.ts`) and every other suite run on each push and PR. Ready-to-use `.github/workflows/ci.yml`:
   ```yaml
@@ -255,7 +281,7 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
         postgres:
           image: postgres:16-alpine
           env: { POSTGRES_PASSWORD: postgres, POSTGRES_DB: dsa_portal_test }
-          ports: ["5432:5432"]
+          ports: ['5432:5432']
           options: >-
             --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
       env:
@@ -266,21 +292,23 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
           with: { node-version: 20, cache: npm }
         - run: npm ci
         - run: npm run build
-        - run: npx jest --runInBand   # runInBand: suites share one database (parallel migrateUp on an empty DB races)
+        - run: npx jest --runInBand # runInBand: suites share one database (parallel migrateUp on an empty DB races)
         - run: npm test -w ui-core && npm test -w web && npm test -w mobile
   ```
   The full-flow test builds and starts the real API and worker itself. It needs no Redis (CR-021).
-- **Status:** pending
+- **Status:** done (final scan): CI sets TEST_DATABASE_URL and runs the ui-core, web and mobile suites
 - **Approved by:** —
 
 ## CR-027
+
 - **Proposed by:** Person 1 (Day 9), **for Person 2** (owner of `server/src/db/seed.ts`)
 - **Problem:** the seeded `admin@dsa.portal` and `student@dsa.portal` can't log in. The hash in `seed.ts` (comment: "bcrypt hash for password123") doesn't match `password123`. `bcrypt.compare('password123', <hash>)` returns `false`.
 - **Proposed change:** replace it with a real hash, e.g. the output of `node -e "require('bcryptjs').hash('password123', 10).then(console.log)"`, and add a seed test that `compare`s it.
-- **Status:** pending
+- **Status:** done: seed hash verified against password123
 - **Approved by:** —
 
 ## CR-028
+
 - **Proposed by:** Person 2 (Day 5; logged as CR-002, renumbered because CR-002 already existed. Its merge had overwritten CR-002..CR-027, which are restored above)
 - **Field:** /docs/openapi.yaml sync section & /server/src/app.ts plugin registration
 - **Proposed change:** Add OpenAPI specifications for offline-first sync endpoints:
@@ -297,10 +325,11 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
      - Response: 200 `{ watermarkSeq: integer, problems: array, userSubmissions: array, userStats: array, userSettings: object, generatedAt: string }`.
   4. Register `syncRoutes` plugin from `/server/src/sync` into `server/src/app.ts`.
 - **Reason:** Day 5 offline-first sync protocol implementation. Enables CLI, Desktop, and Mobile clients to synchronize local SQLite mutations with PostgreSQL.
-- **Status:** pending
+- **Status:** done (final scan): `syncRoutes` mounted under /api/v1 via `buildApp({ postgresRoutes: true })`; openapi.yaml sync section rewritten to the real contract (+ /sync/bootstrap); ui-core types regenerated
 - **Approved by:** —
 
 ## CR-029
+
 - **Proposed by:** Person 1 (final scan, 2026-11-14), **for Person 2** (owner of `server/src/db`, `server/src/sync`, `infra`, migrations)
 - **Problems found after merging Person 2's Days 5-9:**
   1. **`npm run build` fails in server** (so `workers/__tests__/*.e2e` fail too, they build first). Core now exports the sync types and HLC helpers (Person 1 did that part in `core/src/index.ts`). Still needed, verified in a scratch copy (build green, `queue.e2e` passes):
@@ -317,5 +346,5 @@ Log any proposed change to an agreed endpoint, table column, or WebSocket event 
   4. `infra/docker-compose.prod.yml` sets `CORS_ORIGIN`, but the server reads `CORS_ORIGINS` (CR-023), so production allows no browser origin. Rename it.
   5. The Day 5 merge replaced this file with a single CR (CR-002..CR-027 were lost; restored, yours is now CR-028) and dropped ~20 variables from `.env.example` (restored, yours kept). Please merge `main` before editing shared files.
 - **After 1 lands:** Person 1 registers `syncRoutes` in `app.ts` and adds the sync endpoints to `openapi.yaml` (CR-028).
-- **Status:** pending
+- **Status:** done (final scan): all 5 items fixed (pool exports, `req.user.sub`, migration 007, security test on TEST_DATABASE_URL, CORS_ORIGINS); plus sync submission upsert scoped to the owner and `solved` boolean fix, see handover
 - **Approved by:** —
