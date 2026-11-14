@@ -1,0 +1,244 @@
+{
+  "before": {
+    "timestamp": "2026-11-14T07:19:59.142Z",
+    "queries": [
+      {
+        "queryId": "Q1",
+        "queryName": "Random Problem by Topic + Difficulty",
+        "executionTimeMs": 0.023,
+        "planningTimeMs": 0.049,
+        "totalTimeMs": 0.072,
+        "sharedHitBlocks": 3,
+        "sharedReadBlocks": 0,
+        "scanType": "Seq Scan",
+        "planSummary": "Limit on subplan"
+      },
+      {
+        "queryId": "Q2",
+        "queryName": "Problem Catalog List Filtered & Ordered",
+        "executionTimeMs": 0.017,
+        "planningTimeMs": 0.031,
+        "totalTimeMs": 0.048,
+        "sharedHitBlocks": 3,
+        "sharedReadBlocks": 0,
+        "scanType": "Seq Scan",
+        "planSummary": "Limit on subplan"
+      },
+      {
+        "queryId": "Q3",
+        "queryName": "User Submission History with Pagination",
+        "executionTimeMs": 0.016,
+        "planningTimeMs": 0.03,
+        "totalTimeMs": 0.046,
+        "sharedHitBlocks": 23,
+        "sharedReadBlocks": 0,
+        "scanType": "Index Scan",
+        "planSummary": "Limit on subplan"
+      },
+      {
+        "queryId": "Q4",
+        "queryName": "Global Leaderboard (Aggregated Solved & Submissions)",
+        "executionTimeMs": 220.638,
+        "planningTimeMs": 0.118,
+        "totalTimeMs": 220.756,
+        "sharedHitBlocks": 3539,
+        "sharedReadBlocks": 0,
+        "scanType": "Seq Scan",
+        "planSummary": "Limit on subplan"
+      },
+      {
+        "queryId": "Q5",
+        "queryName": "User Topic Breakdown Stats",
+        "executionTimeMs": 0.038,
+        "planningTimeMs": 0.039,
+        "totalTimeMs": 0.077,
+        "sharedHitBlocks": 23,
+        "sharedReadBlocks": 0,
+        "scanType": "Bitmap Heap Scan",
+        "planSummary": "Aggregate on subplan"
+      },
+      {
+        "queryId": "Q6",
+        "queryName": "User Profile Overall Stats Aggregation",
+        "executionTimeMs": 0.013,
+        "planningTimeMs": 0.012,
+        "totalTimeMs": 0.025,
+        "sharedHitBlocks": 20,
+        "sharedReadBlocks": 0,
+        "scanType": "Bitmap Heap Scan",
+        "planSummary": "Aggregate on subplan"
+      },
+      {
+        "queryId": "Q7",
+        "queryName": "Daily Challenge Lookup",
+        "executionTimeMs": 0.009,
+        "planningTimeMs": 0.019,
+        "totalTimeMs": 0.028,
+        "sharedHitBlocks": 5,
+        "sharedReadBlocks": 0,
+        "scanType": "Seq Scan",
+        "planSummary": "Hash Join on subplan"
+      },
+      {
+        "queryId": "Q8",
+        "queryName": "Sync Pull Keyset Cursor Query",
+        "executionTimeMs": 0.012,
+        "planningTimeMs": 0.026,
+        "totalTimeMs": 0.038,
+        "sharedHitBlocks": 12,
+        "sharedReadBlocks": 0,
+        "scanType": "Bitmap Heap Scan",
+        "planSummary": "Limit on subplan"
+      },
+      {
+        "queryId": "Q9",
+        "queryName": "Site-wide Recent Activity Feed (Judged Submissions)",
+        "executionTimeMs": 15.751,
+        "planningTimeMs": 0.137,
+        "totalTimeMs": 15.888,
+        "sharedHitBlocks": 3974,
+        "sharedReadBlocks": 0,
+        "scanType": "Seq Scan",
+        "planSummary": "Limit on subplan"
+      },
+      {
+        "queryId": "Q10",
+        "queryName": "User Problem Solved Verification Check",
+        "executionTimeMs": 0.076,
+        "planningTimeMs": 0.021,
+        "totalTimeMs": 0.097,
+        "sharedHitBlocks": 290,
+        "sharedReadBlocks": 0,
+        "scanType": "Bitmap Heap Scan",
+        "planSummary": "Limit on subplan"
+      }
+    ],
+    "pagination": {
+      "offsetShallow": 6.36,
+      "offsetDeep": 23.665,
+      "keysetShallow": 6.374,
+      "keysetDeep": 5.365
+    }
+  },
+  "after": {
+    "timestamp": "2026-11-14T07:27:28.644Z",
+    "queries": [
+      {
+        "queryId": "Q1",
+        "queryName": "Random Problem by Topic + Difficulty",
+        "executionTimeMs": 0.023,
+        "planningTimeMs": 0.059,
+        "totalTimeMs": 0.082,
+        "sharedHitBlocks": 3,
+        "sharedReadBlocks": 0,
+        "scanType": "Seq Scan",
+        "planSummary": "Limit on subplan"
+      },
+      {
+        "queryId": "Q2",
+        "queryName": "Problem Catalog List Filtered & Ordered",
+        "executionTimeMs": 0.015,
+        "planningTimeMs": 0.03,
+        "totalTimeMs": 0.045,
+        "sharedHitBlocks": 3,
+        "sharedReadBlocks": 0,
+        "scanType": "Seq Scan",
+        "planSummary": "Limit on subplan"
+      },
+      {
+        "queryId": "Q3",
+        "queryName": "User Submission History with Pagination",
+        "executionTimeMs": 0.017,
+        "planningTimeMs": 0.044,
+        "totalTimeMs": 0.061,
+        "sharedHitBlocks": 23,
+        "sharedReadBlocks": 0,
+        "scanType": "Index Scan",
+        "planSummary": "Limit on subplan"
+      },
+      {
+        "queryId": "Q4",
+        "queryName": "Global Leaderboard (Aggregated Solved & Submissions)",
+        "executionTimeMs": 0.016,
+        "planningTimeMs": 0.016,
+        "totalTimeMs": 0.032,
+        "sharedHitBlocks": 3,
+        "sharedReadBlocks": 0,
+        "scanType": "Index Scan",
+        "planSummary": "Limit on subplan"
+      },
+      {
+        "queryId": "Q5",
+        "queryName": "User Topic Breakdown Stats",
+        "executionTimeMs": 0.087,
+        "planningTimeMs": 0.119,
+        "totalTimeMs": 0.206,
+        "sharedHitBlocks": 8,
+        "sharedReadBlocks": 0,
+        "scanType": "Index Only Scan",
+        "planSummary": "Sort on subplan"
+      },
+      {
+        "queryId": "Q6",
+        "queryName": "User Profile Overall Stats Aggregation",
+        "executionTimeMs": 0.02,
+        "planningTimeMs": 0.024,
+        "totalTimeMs": 0.044,
+        "sharedHitBlocks": 5,
+        "sharedReadBlocks": 0,
+        "scanType": "Index Only Scan",
+        "planSummary": "Aggregate on subplan"
+      },
+      {
+        "queryId": "Q7",
+        "queryName": "Daily Challenge Lookup",
+        "executionTimeMs": 0.025,
+        "planningTimeMs": 0.049,
+        "totalTimeMs": 0.074,
+        "sharedHitBlocks": 5,
+        "sharedReadBlocks": 0,
+        "scanType": "Seq Scan",
+        "planSummary": "Hash Join on subplan"
+      },
+      {
+        "queryId": "Q8",
+        "queryName": "Sync Pull Keyset Cursor Query",
+        "executionTimeMs": 0.034,
+        "planningTimeMs": 0.049,
+        "totalTimeMs": 0.083,
+        "sharedHitBlocks": 12,
+        "sharedReadBlocks": 0,
+        "scanType": "Bitmap Heap Scan",
+        "planSummary": "Limit on subplan"
+      },
+      {
+        "queryId": "Q9",
+        "queryName": "Site-wide Recent Activity Feed (Judged Submissions)",
+        "executionTimeMs": 0.178,
+        "planningTimeMs": 0.225,
+        "totalTimeMs": 0.403,
+        "sharedHitBlocks": 234,
+        "sharedReadBlocks": 0,
+        "scanType": "Index Scan",
+        "planSummary": "Limit on subplan"
+      },
+      {
+        "queryId": "Q10",
+        "queryName": "User Problem Solved Verification Check",
+        "executionTimeMs": 0.01,
+        "planningTimeMs": 0.059,
+        "totalTimeMs": 0.069,
+        "sharedHitBlocks": 4,
+        "sharedReadBlocks": 0,
+        "scanType": "Index Scan",
+        "planSummary": "Limit on subplan"
+      }
+    ],
+    "pagination": {
+      "offsetShallow": 0.026,
+      "offsetDeep": 25.585,
+      "keysetShallow": 0.019,
+      "keysetDeep": 0.023
+    }
+  }
+}

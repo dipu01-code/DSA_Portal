@@ -32,11 +32,17 @@ export async function migrateUp(): Promise<{ applied: string[]; skipped: string[
     return { applied: [], skipped: [] };
   }
 
-  // Look for .up.sql files, fallback to .sql (excluding .down.sql)
-  const files = fs
-    .readdirSync(MIGRATIONS_DIR)
-    .filter((f) => f.endsWith('.up.sql') || (f.endsWith('.sql') && !f.endsWith('.down.sql') && !f.endsWith('.up.sql')))
-    .sort();
+  // Look for .up.sql files, fallback to .sql (excluding .down.sql and duplicate .up.sql targets)
+  const allFiles = fs.existsSync(MIGRATIONS_DIR) ? fs.readdirSync(MIGRATIONS_DIR) : [];
+  const upFiles = allFiles.filter((f) => f.endsWith('.up.sql'));
+  const fallbackSqlFiles = allFiles.filter(
+    (f) =>
+      f.endsWith('.sql') &&
+      !f.endsWith('.down.sql') &&
+      !f.endsWith('.up.sql') &&
+      !upFiles.includes(f.replace(/\.sql$/, '.up.sql'))
+  );
+  const files = [...upFiles, ...fallbackSqlFiles].sort();
 
   const applied: string[] = [];
   const skipped: string[] = [];
@@ -57,6 +63,7 @@ export async function migrateUp(): Promise<{ applied: string[]; skipped: string[
       await client.query(sql);
       await client.query('INSERT INTO _migrations (name) VALUES ($1)', [migrationKey]);
     });
+    executedNames.add(migrationKey);
 
     console.log(`[Migration UP] Successfully applied ${file}`);
     applied.push(file);

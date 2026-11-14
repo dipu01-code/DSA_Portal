@@ -1,0 +1,124 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dsa_portal_pg_prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dsa_portal}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_secure_pwd}
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2048M
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    volumes:
+      - pg_prod_data:/var/lib/postgresql/data
+      - ../server/src/db/migrations/001_initial_schema.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-dsa_portal}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - dsa_internal
+
+  redis:
+    image: redis:7-alpine
+    container_name: dsa_portal_redis_prod
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_secure_pwd}
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1024M
+    volumes:
+      - redis_prod_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_secure_pwd}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dsa_internal
+
+  server:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.server
+    container_name: dsa_portal_server_prod
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres_secure_pwd}@postgres:5432/${POSTGRES_DB:-dsa_portal}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secure_pwd}@redis:6379
+      JWT_SECRET: ${JWT_SECRET:-super_secret_jwt_key_production_change_me}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1024M
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - dsa_internal
+
+  workers:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.worker
+    container_name: dsa_portal_workers_prod
+    restart: always
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres_secure_pwd}@postgres:5432/${POSTGRES_DB:-dsa_portal}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secure_pwd}@redis:6379
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2048M
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - dsa_internal
+
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: dsa_portal_nginx_prod
+    restart: always
+    ports:
+      - "${PORT_HTTP:-80}:80"
+      - "${PORT_HTTPS:-443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - server
+    networks:
+      - dsa_internal
+      - dsa_public
+
+networks:
+  dsa_internal:
+    internal: true
+  dsa_public:
+    driver: bridge
+
+volumes:
+  pg_prod_data:
+  redis_prod_data:

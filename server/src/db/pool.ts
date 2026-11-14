@@ -3,16 +3,34 @@ import { Pool, type PoolClient, type QueryResult, type QueryResultRow } from 'pg
 const connectionString =
   process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/dsa_portal';
 
+/**
+ * Tuned PostgreSQL Connection Pool:
+ * Sized according to PostgreSQL formula: connections = ((core_count * 2) + effective_spindle_count)
+ * Defaulting to 20 max connections with 4 warm min connections, 5s query timeouts, and 30s idle reaper.
+ */
 export const pool = new Pool({
   connectionString,
-  max: Number(process.env.DB_POOL_MAX || 10),
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
+  max: Number(process.env.DB_POOL_MAX || 20),
+  min: Number(process.env.DB_POOL_MIN || 4),
+  idleTimeoutMillis: Number(process.env.DB_IDLE_TIMEOUT_MS || 30000),
+  connectionTimeoutMillis: Number(process.env.DB_CONNECT_TIMEOUT_MS || 5000),
+  statement_timeout: 5000,
 });
 
 pool.on('error', (err: Error) => {
   console.error('[DB] Unexpected error on idle client', err);
 });
+
+/**
+ * Returns live connection pool metrics for observability and health endpoints.
+ */
+export function getPoolMetrics() {
+  return {
+    totalCount: pool.totalCount,
+    idleCount: pool.idleCount,
+    waitingCount: pool.waitingCount,
+  };
+}
 
 /**
  * Execute a query with parameters using the connection pool

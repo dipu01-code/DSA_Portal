@@ -4,7 +4,7 @@ import {
   compareHlc,
   generateNextHlc,
   receiveHlc,
-} from '../hlc';
+} from '../../src/sync/hlc';
 
 describe('Hybrid Logical Clock (HLC)', () => {
   const deviceA = 'devA';

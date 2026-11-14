@@ -34,8 +34,11 @@
     "db:migrate": "npm run db:migrate -w server",
     "db:migrate:down": "npm run db:migrate:down -w server",
     "db:seed": "npm run db:seed -w server",
+    "db:seed-load": "tsx scripts/seed-load.ts",
     "db:reset": "npm run db:reset -w server",
-    "db:import-legacy": "npm run db:import-legacy -w server"
+    "db:import-legacy": "npm run db:import-legacy -w server",
+    "db:backup": "tsx scripts/backup-db.ts",
+    "db:restore": "tsx scripts/restore-db.ts"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",
