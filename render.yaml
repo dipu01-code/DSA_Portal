@@ -1,0 +1,80 @@
+# Render Blueprint: API + judging worker + PostgreSQL + web app.
+# Deploy: Render Dashboard → New → Blueprint → pick this repo. Steps and costs: README "Deploy on Render".
+# The two `sync: false` values are asked for once, when the Blueprint is created.
+
+databases:
+  - name: dsa-portal-db
+    databaseName: dsa_portal
+    user: dsa_portal
+    region: singapore
+    # free: fine for a demo, but Render's free Postgres is time-limited. Use 0.1c-256mb (paid) to keep data.
+    plan: free
+
+services:
+  # REST API + Socket.IO (server/). Runs pending migrations on every start, then serves.
+  - type: web
+    name: dsa-portal-api
+    runtime: docker
+    dockerContext: .
+    dockerfilePath: ./infra/docker/Dockerfile.server
+    dockerCommand: sh -c "node server/dist/db/migrate.js up && exec node server/dist/index.js"
+    region: singapore
+    # free sleeps after ~15 min idle (first request then takes about a minute). 0.5c-512mb stays awake.
+    plan: free
+    healthCheckPath: /health/ready
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dsa-portal-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      # Render's proxy sets X-Forwarded-For; without this every user shares one IP rate limit.
+      - key: TRUST_PROXY
+        value: 'true'
+      # The web app's URL, e.g. https://dsa-portal-web.onrender.com (no trailing slash).
+      - key: CORS_ORIGINS
+        sync: false
+
+  # Judging worker (workers/): claims queued submissions from PostgreSQL and runs them in the sandbox.
+  # Background workers have no free plan on Render.
+  - type: worker
+    name: dsa-portal-worker
+    runtime: docker
+    dockerContext: .
+    dockerfilePath: ./infra/docker/Dockerfile.worker
+    region: singapore
+    plan: 0.5c-512mb
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dsa-portal-db
+          property: connectionString
+      # The default is one loop per host CPU, too many sandboxes for 512 MB.
+      - key: WORKER_CONCURRENCY
+        value: '2'
+
+  # React web app (web/), served as a static site from Render's CDN.
+  - type: web
+    name: dsa-portal-web
+    runtime: static
+    buildCommand: npm ci && npm run build -w web
+    staticPublishPath: ./web/dist
+    routes:
+      # Client-side routing: every path serves the app.
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_VERSION
+        value: '20'
+      # The web build doesn't need Electron's binary (desktop workspace).
+      - key: ELECTRON_SKIP_BINARY_DOWNLOAD
+        value: '1'
+      # The API's URL, e.g. https://dsa-portal-api.onrender.com (no trailing slash). Baked in at build time.
+      - key: VITE_API_URL
+        sync: false

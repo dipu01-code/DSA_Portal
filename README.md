@@ -20,7 +20,7 @@ four front ends: **CLI, Web, Desktop and Mobile**. Offline work syncs back to th
 - [Running the clients](#running-the-clients)
 - [Configuration](#configuration)
 - [Testing and quality](#testing-and-quality)
-- [Deployment](#deployment)
+- [Deployment](#deployment) ([Render](#deploy-on-render), [self-hosted](#self-hosted-docker-compose))
 - [API](#api)
 - [Documentation](#documentation)
 - [Team](#team)
@@ -170,6 +170,32 @@ CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs lint, format and 
 a PostgreSQL service, and builds both Docker images on every push to `main` and on pull requests.
 
 ## Deployment
+
+### Deploy on Render
+
+[`render.yaml`](render.yaml) is a Render Blueprint that creates everything from this repo: the API (Docker, runs
+migrations on start), the judging worker (Docker), PostgreSQL and the web app (static site on Render's CDN).
+Region: Singapore.
+
+1. Sign in at [render.com](https://render.com) with GitHub and allow access to this repository.
+2. **New → Blueprint**, pick the repo; Render reads `render.yaml` and lists the four resources.
+3. Fill in the two prompted values (service URLs are `https://<service-name>.onrender.com`):
+   - `CORS_ORIGINS` (API): `https://dsa-portal-web.onrender.com`
+   - `VITE_API_URL` (web): `https://dsa-portal-api.onrender.com`
+4. **Apply**. The first build takes several minutes. If Render gives a service a different URL (name taken), update
+   both values under the service's **Environment** tab, then redeploy the web app.
+5. Load the problem bank once: open **dsa-portal-worker → Shell** and run `node server/dist/db/seed.js`.
+   It also creates two demo accounts (`admin@dsa.portal`, `student@dsa.portal`, password `password123`);
+   change or delete them before sharing the site.
+6. Open `https://dsa-portal-web.onrender.com`. API docs: `https://dsa-portal-api.onrender.com/docs`.
+
+Costs (check Render's current pricing): the API and web app use free plans. The free API sleeps after about 15
+minutes idle, so the first request then takes about a minute. The worker needs a paid instance (Render has no free
+background workers). The free PostgreSQL is time-limited, so switch `plan` in `render.yaml` to a paid one to keep
+data. Every push to `main` redeploys automatically. Point desktop and mobile builds at the API URL to use the
+same backend.
+
+### Self-hosted (Docker Compose)
 
 The production stack (PostgreSQL, Redis, API, worker and an nginx reverse proxy, on separated
 networks with resource limits and health checks) is defined in `infra/docker-compose.prod.yml`:
