@@ -193,9 +193,13 @@ describe("cached leaderboard + daily challenge stores (wrappers around Person 1'
 
 /** Against a real Redis when one is configured: REDIS_TEST_URL=redis://localhost:6380 npx jest cache */
 (process.env.REDIS_TEST_URL ? describe : describe.skip)('RedisBackend (real Redis)', () => {
-  const backend = RedisBackend.fromUrl(process.env.REDIS_TEST_URL!);
+  // In beforeAll, not the describe body: describe.skip still runs the body, and an unquit client keeps Jest alive.
+  let backend: RedisBackend;
   const ns = `test-${Date.now()}`;
-  afterAll(() => backend.quit());
+  beforeAll(() => {
+    backend = RedisBackend.fromUrl(process.env.REDIS_TEST_URL!);
+  });
+  afterAll(() => backend?.quit());
 
   it('does cache-aside, locking and generations on Redis', async () => {
     const [c1, c2] = [

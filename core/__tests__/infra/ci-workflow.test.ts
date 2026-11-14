@@ -24,7 +24,7 @@ describe('GitHub Actions CI Configuration', () => {
     // Quality job steps
     expect(content).toContain('npm run lint');
     expect(content).toContain('npm run format');
-    expect(content).toContain('npx tsc');
+    expect(content).toContain('npm run build'); // typecheck step builds core → server → workers
 
     // Services in test job
     expect(content).toContain('postgres:16-alpine');

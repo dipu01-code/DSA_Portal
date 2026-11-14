@@ -36,11 +36,10 @@ jobs:
       - name: Run code formatting check
         run: npm run format
 
+      # Builds core → server → workers in order: server resolves @dsa-portal/core and workers resolve
+      # @dsa-portal/server through their dist/ output, which a fresh checkout doesn't have. tsc type-checks each.
       - name: Typecheck packages
-        run: |
-          npx tsc -p core/tsconfig.json --noEmit
-          npx tsc -p server/tsconfig.json --noEmit
-          npx tsc -p workers/tsconfig.json --noEmit
+        run: npm run build
 
   test:
     name: Unit & Integration Tests
