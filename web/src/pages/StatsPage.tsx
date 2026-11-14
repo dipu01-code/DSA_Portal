@@ -96,8 +96,9 @@ function StreakCalendar({ streak }: { streak: StreakDetail }) {
   );
   start.setUTCDate(start.getUTCDate() - start.getUTCDay()); // align to Sunday
   const days: string[] = [];
-  for (let d = new Date(start); d <= today; d.setUTCDate(d.getUTCDate() + 1))
+  for (let d = new Date(start); d <= today; d.setUTCDate(d.getUTCDate() + 1)) {
     days.push(d.toISOString().slice(0, 10));
+  }
   return (
     <figure className="card" aria-labelledby="cal-title">
       <figcaption id="cal-title">

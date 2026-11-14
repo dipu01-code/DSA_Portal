@@ -46,7 +46,8 @@ test('register → login → choose topic → solve → result → stats', async
   await expect(page.getByRole('heading', { name: 'Practice' })).toBeVisible();
 
   // Log out and back in with the new account.
-  await page.getByRole('button', { name: `Log out ${user.username}` }).click();
+  await page.getByRole('button', { name: `Account: ${user.username}` }).click();
+  await page.getByRole('button', { name: 'Log out' }).click();
   await page.getByLabel('Email').fill(user.email);
   await page.getByLabel('Password').fill('wrong-password-1');
   await page.getByRole('button', { name: 'Sign in' }).click();

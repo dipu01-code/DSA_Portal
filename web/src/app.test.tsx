@@ -131,3 +131,58 @@ describe('ResultsPanel', () => {
     expect(screen.getAllByRole('row')).toHaveLength(3);
   });
 });
+
+describe('Top bar', () => {
+  it('highlights the active tab, and keeps Practice active on a problem page', async () => {
+    const { unmount } = renderApp('#/stats');
+    const stats = await screen.findByRole('link', { name: 'Stats' });
+    await waitFor(() => expect(stats.getAttribute('aria-current')).toBe('page'));
+    expect(stats.className).toContain('active');
+    expect(screen.getByRole('link', { name: 'Practice' }).getAttribute('aria-current')).toBeNull();
+    unmount();
+
+    renderApp('#/problem/two-sum');
+    await screen.findByRole('heading', { name: 'Two Sum', level: 1 });
+    const practice = screen.getByRole('link', { name: 'Practice' });
+    expect(practice.getAttribute('aria-current')).toBe('page');
+    expect(practice.className).toContain('active');
+    expect(screen.getByRole('link', { name: 'Stats' }).getAttribute('aria-current')).toBeNull();
+  });
+
+  it('theme: one icon button cycles light → dark → system', async () => {
+    renderApp('#/leaderboard');
+    const settings = dsa.stores.settings;
+    settings.getState().setTheme('light');
+    const btn = await screen.findByRole('button', { name: 'Theme: Light. Switch to Dark' });
+    expect(btn.querySelector('svg')).toBeTruthy();
+    fireEvent.click(btn);
+    expect(settings.getState().theme).toBe('dark');
+    fireEvent.click(screen.getByRole('button', { name: 'Theme: Dark. Switch to System' }));
+    expect(settings.getState().theme).toBe('system');
+    fireEvent.click(screen.getByRole('button', { name: 'Theme: System. Switch to Light' }));
+    expect(settings.getState().theme).toBe('light');
+    expect(screen.queryByRole('combobox', { name: 'Theme' })).toBeNull();
+  });
+
+  it('avatar shows the initial and opens a menu with the username and Log out', async () => {
+    renderApp('#/leaderboard');
+    const avatar = await screen.findByRole('button', { name: 'Account: demo' });
+    expect(avatar.textContent).toBe('D');
+    expect(avatar.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.queryByRole('button', { name: /^Log out/ })).toBeNull();
+
+    fireEvent.click(avatar);
+    expect(avatar.getAttribute('aria-expanded')).toBe('true');
+    expect(document.getElementById('account-panel')!.textContent).toContain('demo');
+    const logout = screen.getByRole('button', { name: 'Log out' });
+    expect(document.activeElement).toBe(logout);
+    fireEvent.keyDown(logout, { key: 'Escape' }); // Esc closes and returns focus
+    expect(screen.queryByRole('button', { name: 'Log out' })).toBeNull();
+    expect(document.activeElement).toBe(avatar);
+
+    fireEvent.click(avatar);
+    fireEvent.click(screen.getByRole('button', { name: 'Log out' }));
+    expect(await screen.findByRole('button', { name: 'Sign in' })).toBeTruthy();
+    expect(dsa.stores.auth.getState().status).toBe('anonymous');
+  });
+});

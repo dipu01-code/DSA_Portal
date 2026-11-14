@@ -87,6 +87,42 @@ pre {
 .topbar nav a.active {
   background: var(--color-primary);
   color: var(--color-onPrimary);
+  font-weight: 600; /* not colour alone */
+}
+.account {
+  position: relative;
+}
+.avatar {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  color: var(--color-onPrimary);
+  border-color: var(--color-primary);
+  font-weight: 700;
+}
+.account-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + var(--space-xs));
+  min-width: 200px;
+  z-index: 20;
+  margin: 0;
+  padding: var(--space-md);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
+}
+.account-panel p {
+  margin: 0;
+}
+.account-name {
+  font-weight: 600;
+  margin-bottom: var(--space-sm) !important;
+  overflow-wrap: anywhere;
+}
+.account-panel button {
+  width: 100%;
 }
 .spacer {
   flex: 1;
