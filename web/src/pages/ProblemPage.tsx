@@ -11,6 +11,9 @@ import {
 import { themeMode } from '../theme';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ResultsPanel, type ResultsView } from '../components/ResultsPanel';
+import { InlineMarkdown, Markdown } from '../components/Markdown';
+import { Icon } from '../components/Icon';
+import { isAccepted, useSolved } from '../use-solved';
 import { desktop } from '../platform';
 import { runInWorker } from '../run-in-worker';
 
@@ -36,8 +39,15 @@ export function ProblemPage() {
     sub.reset();
     setRun(null);
     setShowResults(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Only when the route's problem changes: p and sub are stores, not inputs.
   }, [id]);
+
+  // Accepted here and now counts at once; otherwise ask the server (null = unknown, e.g. offline).
+  const acceptedNow = sub.status === 'done' && !!sub.current && isAccepted(sub.current);
+  const solvedOnServer = useSolved(id, acceptedNow);
+  const solved = acceptedNow || solvedOnServer;
+  // A fresh solve unlocks it even if an earlier reveal was refused.
+  const solutionLocked = !p.solution && !solved && (solved === false || p.solutionLocked);
 
   const latest = useRef({ p, sub });
   latest.current = { p, sub };
@@ -94,12 +104,13 @@ export function ProblemPage() {
       </div>
     );
   }
-  if (!p.problem)
+  if (!p.problem) {
     return (
       <p role="alert" className="error">
         {p.error}
       </p>
     );
+  }
   const problem = p.problem;
 
   const submitView: ResultsView | null =
@@ -137,7 +148,7 @@ export function ProblemPage() {
           <span className={`badge ${problem.difficulty.toLowerCase()}`}>{problem.difficulty}</span>{' '}
           <span className="badge">{problem.topic}</span>
         </p>
-        <p className="description">{problem.description}</p>
+        <Markdown text={problem.description} className="description" />
         <h2>Examples</h2>
         <ul className="examples">
           {problem.testCases.slice(0, 2).map((t, i) => (
@@ -152,7 +163,9 @@ export function ProblemPage() {
         {p.hints.length > 0 && (
           <ol className="hints" aria-live="polite">
             {p.hints.map((h, i) => (
-              <li key={i}>{h}</li>
+              <li key={i}>
+                <InlineMarkdown text={h} />
+              </li>
             ))}
           </ol>
         )}
@@ -171,11 +184,25 @@ export function ProblemPage() {
             <code>{p.solution}</code>
           </pre>
         ) : (
-          <button type="button" onClick={() => setConfirmOpen(true)}>
-            Reveal solution…
-          </button>
+          <>
+            <button
+              type="button"
+              className="with-icon"
+              onClick={() => setConfirmOpen(true)}
+              aria-describedby={solutionLocked ? 'solution-locked' : undefined}
+            >
+              {solutionLocked && <Icon name="lock" />}
+              Reveal solution…
+            </button>
+            {/* Server is the authority: the button stays usable in case this device's view is stale. */}
+            {solutionLocked && (
+              <p id="solution-locked" className="muted">
+                Solve the problem first to unlock its solution.
+              </p>
+            )}
+          </>
         )}
-        {p.error && (
+        {p.error && !p.solutionLocked && (
           <p role="alert" className="error">
             {p.error}
           </p>

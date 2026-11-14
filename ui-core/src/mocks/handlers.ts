@@ -154,6 +154,15 @@ export function createMockApi(baseUrl = '') {
       });
       return HttpResponse.json({ submissionId: id, status: 'queued' }, { status: 202 });
     }),
+    // Like the server: the caller's own submissions, newest first, optionally for one problem.
+    http.get(u('/submissions'), ({ request }) => {
+      const problemId = new URL(request.url).searchParams.get('problemId');
+      const data = [...state.submissions.values()]
+        .filter((s) => !problemId || s.problemId === problemId)
+        .reverse()
+        .map(({ polls: _, ...s }) => s);
+      return HttpResponse.json({ data, nextCursor: null });
+    }),
     http.get(u('/submissions/:id'), ({ params }) => {
       const s = state.submissions.get(String(params.id));
       if (!s) return err(404, 'NOT_FOUND', 'Submission not found');

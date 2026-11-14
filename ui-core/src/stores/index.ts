@@ -106,6 +106,8 @@ export interface ProblemState {
   code: string;
   hints: string[];
   solution: string | null;
+  /** The server refused the solution because this user hasn't solved the problem yet (an expected state, not a failure). */
+  solutionLocked: boolean;
   loading: boolean;
   error: string | null;
   setFilters(topic: string | null, difficulty: Difficulty | null): void;
@@ -123,7 +125,13 @@ export function createProblemStore(api: DsaApi): StoreApi<ProblemState> {
       set({ loading: true, error: null });
       try {
         const problem = await fetchProblem();
-        set({ problem, code: problem.starterCode, hints: [], solution: null });
+        set({
+          problem,
+          code: problem.starterCode,
+          hints: [],
+          solution: null,
+          solutionLocked: false,
+        });
       } catch (e) {
         set({
           error:
@@ -142,6 +150,7 @@ export function createProblemStore(api: DsaApi): StoreApi<ProblemState> {
       code: '',
       hints: [],
       solution: null,
+      solutionLocked: false,
       loading: false,
       error: null,
       setFilters: (topic, difficulty) => set({ topic, difficulty }),
@@ -167,13 +176,12 @@ export function createProblemStore(api: DsaApi): StoreApi<ProblemState> {
         const { problem } = get();
         if (!problem) return;
         try {
-          set({ solution: await api.solution(problem.id), error: null });
+          set({ solution: await api.solution(problem.id), solutionLocked: false, error: null });
         } catch (e) {
+          const locked = e instanceof ApiError && e.code === 'SOLUTION_LOCKED';
           set({
-            error:
-              e instanceof ApiError && e.code === 'SOLUTION_LOCKED'
-                ? 'Solve the problem first to unlock its solution'
-                : message(e),
+            solutionLocked: locked,
+            error: locked ? 'Solve the problem first to unlock its solution' : message(e),
           });
         }
       },

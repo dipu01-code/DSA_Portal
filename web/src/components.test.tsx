@@ -181,6 +181,44 @@ describe('StatsPage (charts)', () => {
   });
 });
 
+describe('ProblemPage (problem text)', () => {
+  it('renders the description as Markdown: backticks become inline code', async () => {
+    ui(<ProblemPage />, '/problem/two-sum');
+    const heading = await screen.findByRole('heading', { name: 'Two Sum' });
+    const article = heading.closest('article')!;
+    const codes = [...article.querySelectorAll('.description code')].map((c) => c.textContent);
+    expect(codes).toEqual(['nums', 'target', 'target']);
+    expect(article.querySelector('.description')!.textContent).not.toContain('`');
+  });
+
+  it('shows a locked solution as a muted note with a lock, not an error; solving unlocks it', async () => {
+    ui(<ProblemPage />, '/problem/valid-anagram');
+    const note = await screen.findByText('Solve the problem first to unlock its solution.');
+    expect(note.className).toBe('muted');
+    const reveal = screen.getByRole('button', { name: 'Reveal solution…' });
+    expect(reveal.getAttribute('aria-describedby')).toBe('solution-locked');
+    expect(reveal.querySelector('svg.icon')).toBeTruthy();
+
+    // The server refuses: still a muted note, never a red alert.
+    fireEvent.click(reveal);
+    fireEvent.click(screen.getByRole('button', { name: 'Reveal', hidden: true }));
+    await waitFor(() => expect(dsa.stores.problem.getState().solutionLocked).toBe(true));
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    fireEvent.change(screen.getByLabelText('Code editor'), {
+      target: { value: 'function solve() { return true; }' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(await screen.findByText('Accepted')).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.queryByText('Solve the problem first to unlock its solution.')).toBeNull()
+    );
+    expect(
+      screen.getByRole('button', { name: 'Reveal solution…' }).querySelector('svg')
+    ).toBeNull();
+  });
+});
+
 describe('ProblemPage (editor panel)', () => {
   it('runs, resets, and runs again with Ctrl/Cmd+Enter', async () => {
     ui(<ProblemPage />, '/problem/two-sum');
