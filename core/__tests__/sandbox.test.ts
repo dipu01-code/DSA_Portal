@@ -67,7 +67,12 @@ describe('sandbox — normal solution', () => {
 });
 
 describe('sandbox — security (hostile samples must be contained)', () => {
-  const shortTimeout = { perTestTimeoutMs: 1500, totalTimeoutMs: 10000, memoryLimitMb: 64, outputCap: 50000 };
+  const shortTimeout = {
+    perTestTimeoutMs: 1500,
+    totalTimeoutMs: 10000,
+    memoryLimitMb: 64,
+    outputCap: 50000,
+  };
 
   it('contains an infinite loop (timeout)', () => {
     const result = submitCodeSandbox(
@@ -102,7 +107,7 @@ describe('sandbox — security (hostile samples must be contained)', () => {
     expect(result.perTest.every((r) => r.error)).toBe(true);
   });
 
-  it('contains require(\'fs\') (require not in sandbox)', () => {
+  it("contains require('fs') (require not in sandbox)", () => {
     const result = submitCodeSandbox(
       twoSum,
       `function solve(input) { require('fs'); return 1; }`,
@@ -152,13 +157,21 @@ describe('sandbox — security (hostile samples must be contained)', () => {
 });
 
 describe('sandbox — escape attempts (must never reach the real process)', () => {
-  const shortTimeout = { perTestTimeoutMs: 1500, totalTimeoutMs: 10000, memoryLimitMb: 64, outputCap: 50000 };
+  const shortTimeout = {
+    perTestTimeoutMs: 1500,
+    totalTimeoutMs: 10000,
+    memoryLimitMb: 64,
+    outputCap: 50000,
+  };
   const tryEscape = (expr: string) =>
     `function solve(input) { try { const P = ${expr}; return P && typeof P.pid === 'number' ? 'ESCAPED' : 'contained'; } catch (e) { return 'contained'; } }`;
 
   it.each([
     ['host function constructor via console.log', "console.log.constructor('return process')()"],
-    ['host function constructor via input object', "input.constructor.constructor('return process')()"],
+    [
+      'host function constructor via input object',
+      "input.constructor.constructor('return process')()",
+    ],
     ['global object constructor', "this.constructor.constructor('return process')()"],
     ['context Function from a string', "(function(){}).constructor('return process')()"],
     ['an error object', "new Error().constructor.constructor('return process')()"],
@@ -186,12 +199,20 @@ describe('sandbox — escape attempts (must never reach the real process)', () =
   });
 
   it('keeps solutions declared with const working', () => {
-    const result = submitCodeSandbox(twoSum, correctCode.replace('function solve(input)', 'const solve = (input) =>'), shortTimeout);
+    const result = submitCodeSandbox(
+      twoSum,
+      correctCode.replace('function solve(input)', 'const solve = (input) =>'),
+      shortTimeout
+    );
     expect(result.status).toBe('passed');
   });
 
   it('blocks eval / Function code generation inside the sandbox', () => {
-    const result = submitCodeSandbox(twoSum, `function solve() { return Function('return 1')(); }`, shortTimeout);
+    const result = submitCodeSandbox(
+      twoSum,
+      `function solve() { return Function('return 1')(); }`,
+      shortTimeout
+    );
     expect(result.perTest[0].error).toMatch(/Code generation from strings disallowed/);
   });
 
@@ -208,11 +229,16 @@ describe('sandbox — async runner (used by the worker)', () => {
   it('gives the same verdicts as the sync runner', async () => {
     expect((await submitCodeSandboxAsync(twoSum, correctCode, opts)).status).toBe('passed');
     expect((await submitCodeSandboxAsync(twoSum, wrongCode, opts)).status).toBe('failed');
-    expect((await submitCodeSandboxAsync(twoSum, `function solve() { throw new Error('boom'); }`, opts)).status).toBe('error');
+    expect(
+      (await submitCodeSandboxAsync(twoSum, `function solve() { throw new Error('boom'); }`, opts))
+        .status
+    ).toBe('error');
   });
 
   it('contains an infinite loop and an escape attempt', async () => {
-    expect((await submitCodeSandboxAsync(twoSum, `function solve() { while (true) {} }`, opts)).status).toBe('timeout');
+    expect(
+      (await submitCodeSandboxAsync(twoSum, `function solve() { while (true) {} }`, opts)).status
+    ).toBe('timeout');
     const escape = `function solve() { try { return typeof console.log.constructor('return process')().pid; } catch (e) { return 'blocked'; } }`;
     const r = await submitCodeSandboxAsync(twoSum, escape, opts);
     expect(r.perTest.map((t) => t.actual)).not.toContain('number');
@@ -222,7 +248,10 @@ describe('sandbox — async runner (used by the worker)', () => {
     const slow = { ...twoSum, testCases: twoSum.testCases.slice(0, 1) };
     const loop = `function solve() { while (true) {} }`;
     const start = Date.now();
-    await Promise.all([submitCodeSandboxAsync(slow, loop, opts), submitCodeSandboxAsync(slow, loop, opts)]);
+    await Promise.all([
+      submitCodeSandboxAsync(slow, loop, opts),
+      submitCodeSandboxAsync(slow, loop, opts),
+    ]);
     // Sequential would take >= 2 x 1000 ms.
     expect(Date.now() - start).toBeLessThan(1900);
   });
@@ -249,7 +278,10 @@ describe('sandbox — failure labels', () => {
 
 describe('nodePath / extraEnv (CR-018: desktop runs the child with its own binary)', () => {
   it('runs the child with the given binary and env', async () => {
-    const result = await submitCodeSandboxAsync(twoSum, correctCode, { nodePath: process.execPath, extraEnv: { ELECTRON_RUN_AS_NODE: '1' } });
+    const result = await submitCodeSandboxAsync(twoSum, correctCode, {
+      nodePath: process.execPath,
+      extraEnv: { ELECTRON_RUN_AS_NODE: '1' },
+    });
     expect(result.status).toBe('passed');
   });
 
@@ -261,14 +293,24 @@ describe('nodePath / extraEnv (CR-018: desktop runs the child with its own binar
 
   it('cannot override the memory limit through extraEnv', async () => {
     const hog = 'function solve() { const a = []; while (true) a.push(new Array(1e6).fill(1)); }';
-    const result = await submitCodeSandboxAsync(twoSum, hog, { extraEnv: { NODE_OPTIONS: '--max-old-space-size=4096' }, perTestTimeoutMs: 5000 });
+    const result = await submitCodeSandboxAsync(twoSum, hog, {
+      extraEnv: { NODE_OPTIONS: '--max-old-space-size=4096' },
+      perTestTimeoutMs: 5000,
+    });
     // With the override honoured it would run until the 5 s timeout; the 64 MB cap kills it first.
     expect(result.status).toBe('error');
   }, 60000);
 });
 
 describe('Node permission model on the child (Day 8: reduced privileges)', () => {
-  const opts = { perTestTimeoutMs: 2000, totalTimeoutMs: 30000, memoryLimitMb: 64, outputCap: 50000, nodePath: 'node', extraEnv: {} };
+  const opts = {
+    perTestTimeoutMs: 2000,
+    totalTimeoutMs: 30000,
+    memoryLimitMb: 64,
+    outputCap: 50000,
+    nodePath: 'node',
+    extraEnv: {},
+  };
   const code = path.join(os.tmpdir(), 'dsa-sandbox-x', 'code.js');
 
   it('runs plain node with fs reads limited to the wrapper and the test dir', () => {
@@ -284,7 +326,10 @@ describe('Node permission model on the child (Day 8: reduced privileges)', () =>
   it('those flags really block reading other files and spawning processes', () => {
     const { args } = childCommand(code, code, opts);
     const flags = args.filter((a) => a.startsWith('--'));
-    for (const script of ['require("fs").readFileSync("/etc/hosts")', 'require("child_process").execSync("id")']) {
+    for (const script of [
+      'require("fs").readFileSync("/etc/hosts")',
+      'require("child_process").execSync("id")',
+    ]) {
       const r = spawnSync('node', [...flags, '-e', script], { encoding: 'utf8' });
       expect(r.status).not.toBe(0);
       expect(r.stderr).toMatch(/ERR_ACCESS_DENIED|restricted/);
@@ -292,7 +337,9 @@ describe('Node permission model on the child (Day 8: reduced privileges)', () =>
   });
 
   it('leaves a custom binary (Electron, no permission model) without the flags', () => {
-    expect(childCommand(code, code, { ...opts, nodePath: '/x/electron' }).args[0]).toMatch(/sandbox-exec\.js$/);
+    expect(childCommand(code, code, { ...opts, nodePath: '/x/electron' }).args[0]).toMatch(
+      /sandbox-exec\.js$/
+    );
   });
 });
 
@@ -303,7 +350,8 @@ describe('one child per submission (Day 9): a fresh context per test, failures s
     `function solve({ nums, target }) { if (nums.length === 3) { ${bad} } const m = new Map(); for (let i = 0; i < nums.length; i++) { if (m.has(target - nums[i])) return [m.get(target - nums[i]), i]; m.set(nums[i], i); } }`;
 
   it('gives every test a fresh global scope (nothing carries over between tests)', async () => {
-    const code = 'globalThis.calls = (globalThis.calls || 0) + 1; var seen = calls; function solve() { return seen; }';
+    const code =
+      'globalThis.calls = (globalThis.calls || 0) + 1; var seen = calls; function solve() { return seen; }';
     const r = await submitCodeSandboxAsync(twoSum, code, opts);
     expect(r.perTest.map((t) => t.actual)).toEqual([1, 1, 1]);
   });
@@ -316,7 +364,11 @@ describe('one child per submission (Day 9): a fresh context per test, failures s
   });
 
   it('a crash keeps earlier results, names the crashing test, and marks the rest not run', () => {
-    const r = submitCodeSandbox(twoSum, breaksOnSecond('const a = []; while (true) a.push(new Array(1e6).fill(1));'), { ...opts, memoryLimitMb: 32 });
+    const r = submitCodeSandbox(
+      twoSum,
+      breaksOnSecond('const a = []; while (true) a.push(new Array(1e6).fill(1));'),
+      { ...opts, memoryLimitMb: 32 }
+    );
     expect(r.status).toBe('error');
     expect(r.perTest[0].passed).toBe(true);
     expect(r.perTest[1].error).toMatch(/out of memory/);
@@ -324,8 +376,13 @@ describe('one child per submission (Day 9): a fresh context per test, failures s
   });
 
   it('contains an endless chain of promise jobs (microtasks count against the timeout)', async () => {
-    const code = 'function solve() { (function f() { Promise.resolve().then(f); })(); return [0, 1]; }';
-    const r = await submitCodeSandboxAsync({ ...twoSum, testCases: twoSum.testCases.slice(0, 1) }, code, opts);
+    const code =
+      'function solve() { (function f() { Promise.resolve().then(f); })(); return [0, 1]; }';
+    const r = await submitCodeSandboxAsync(
+      { ...twoSum, testCases: twoSum.testCases.slice(0, 1) },
+      code,
+      opts
+    );
     expect(r.status).toBe('timeout');
   });
 
@@ -337,6 +394,10 @@ describe('one child per submission (Day 9): a fresh context per test, failures s
       ` function solve() { return [9, 9]; }`;
     const r = await submitCodeSandboxAsync(twoSum, code, opts);
     expect(r.status).toBe('failed');
-    expect(r.perTest.map((t) => t.actual)).toEqual([[9, 9], [9, 9], [9, 9]]);
+    expect(r.perTest.map((t) => t.actual)).toEqual([
+      [9, 9],
+      [9, 9],
+      [9, 9],
+    ]);
   });
 });

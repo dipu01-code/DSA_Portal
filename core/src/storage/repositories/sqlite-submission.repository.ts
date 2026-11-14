@@ -1,4 +1,5 @@
-import type { Submission, SubmissionRepository, ExecutionResult } from '../../types';
+import type { Submission, SubmissionRepository, PerTestResult } from '../../types';
+import { verdictOf } from '../../verdict';
 import type { DatabaseAdapter } from '../adapter';
 
 interface SubmissionRow {
@@ -30,12 +31,13 @@ export class SqliteSubmissionRepository implements SubmissionRepository {
       }
 
       const problemId = probRow.id;
-      const subId = submission.id || `sub-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-      const passed = submission.result?.passed ?? 0;
-      const total = submission.result?.total ?? 0;
-      const resultsJson = submission.result?.results
-        ? JSON.stringify(submission.result.results)
-        : null;
+      const subId =
+        submission.id || `sub-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+      // Same columns as the server: counts + per-test rows, so sync can push them unchanged.
+      const perTest = submission.result?.perTest ?? [];
+      const passed = perTest.filter((t) => t.passed).length;
+      const total = perTest.length;
+      const resultsJson = submission.result ? JSON.stringify(perTest) : null;
 
       const existing = await tx.queryOne<{ id: string }>(
         'SELECT id FROM submissions WHERE id = ? LIMIT 1',
@@ -53,7 +55,17 @@ export class SqliteSubmissionRepository implements SubmissionRepository {
         await tx.execute(
           `INSERT INTO submissions (id, user_id, problem_id, code, status, passed, total, results, created_at, judged_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), CASE WHEN ? IN ('judged', 'failed') THEN datetime('now') ELSE NULL END)`,
-          [subId, submission.userId, problemId, submission.code, submission.status, passed, total, resultsJson, submission.status]
+          [
+            subId,
+            submission.userId,
+            problemId,
+            submission.code,
+            submission.status,
+            passed,
+            total,
+            resultsJson,
+            submission.status,
+          ]
         );
       }
 
@@ -112,22 +124,21 @@ export class SqliteSubmissionRepository implements SubmissionRepository {
     return rows.map((r) => this.mapRow(r));
   }
 
+  /** shortcut: the local store has no idempotency_key column (no HTTP retries offline); add one if a local API appears. */
+  async findByIdempotencyKey(_userId: string, _key: string): Promise<Submission | null> {
+    return null;
+  }
+
   private mapRow(row: SubmissionRow): Submission {
-    let result: ExecutionResult | undefined = undefined;
-    if (row.results || row.status === 'judged') {
-      let parsedResults: any[] = [];
-      try {
-        parsedResults = row.results ? JSON.parse(row.results) : [];
-      } catch {
-        parsedResults = [];
-      }
-      result = {
-        problemId: row.problem_slug,
-        passed: row.passed,
-        total: row.total,
-        results: parsedResults,
-      };
+    let perTest: PerTestResult[] | undefined;
+    try {
+      perTest = row.results ? JSON.parse(row.results) : undefined;
+    } catch {
+      perTest = undefined;
     }
+    const result = perTest
+      ? { problemId: row.problem_slug, status: verdictOf(perTest), perTest }
+      : undefined;
 
     return {
       id: row.id,
@@ -137,6 +148,7 @@ export class SqliteSubmissionRepository implements SubmissionRepository {
       status: row.status,
       result,
       createdAt: new Date(row.created_at),
+      judgedAt: row.judged_at ? new Date(row.judged_at) : undefined,
     };
   }
 }

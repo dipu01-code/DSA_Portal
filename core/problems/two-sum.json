@@ -12,7 +12,10 @@
   ],
   "hints": [
     { "level": 1, "content": "Use a hash map to store value -> index as you iterate." },
-    { "level": 2, "content": "For each number, check whether (target - num) already exists in the map." }
+    {
+      "level": 2,
+      "content": "For each number, check whether (target - num) already exists in the map."
+    }
   ],
   "solution": {
     "code": "function solve(input) { const { nums, target } = input; const map = new Map(); for (let i = 0; i < nums.length; i++) { const complement = target - nums[i]; if (map.has(complement)) return [map.get(complement), i]; map.set(nums[i], i); } return []; }",

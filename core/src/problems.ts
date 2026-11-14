@@ -1,8 +1,5 @@
 import * as path from 'path';
-import {
-  loadProblems,
-  filterProblems,
-} from './problem-loader';
+import { loadProblems, filterProblems } from './problem-loader';
 import { selectRandomProblem } from './random-selector';
 import type { Problem, Topic, Difficulty } from './types';
 
@@ -14,9 +11,11 @@ export function getProblem(id: string): Problem | undefined {
   return PROBLEMS.find((p) => p.id === id);
 }
 
-export function getRandomProblem(
-  options?: { topic?: Topic; difficulty?: Difficulty; recentIds?: string[] }
-): Problem | null {
+export function getRandomProblem(options?: {
+  topic?: Topic;
+  difficulty?: Difficulty;
+  recentIds?: string[];
+}): Problem | null {
   return selectRandomProblem(PROBLEMS, options ?? {});
 }
 

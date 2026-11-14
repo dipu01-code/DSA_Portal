@@ -26,7 +26,11 @@ describe('Keyset Pagination Utilities', () => {
   });
 
   test('buildKeysetClause constructs row constructor comparisons', () => {
-    const clauseDesc = buildKeysetClause('DESC', ['created_at', 'id'], ['2026-11-14T00:00:00Z', 'uuid-123']);
+    const clauseDesc = buildKeysetClause(
+      'DESC',
+      ['created_at', 'id'],
+      ['2026-11-14T00:00:00Z', 'uuid-123']
+    );
     expect(clauseDesc.sql).toBe('(created_at, id) < ($1, $2)');
     expect(clauseDesc.params).toEqual(['2026-11-14T00:00:00Z', 'uuid-123']);
 

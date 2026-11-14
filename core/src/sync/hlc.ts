@@ -18,7 +18,9 @@ export const HLC_DELIMITER = '.';
 export function parseHlc(hlcString: string): HybridLogicalClock {
   const parts = hlcString.split(HLC_DELIMITER);
   if (parts.length !== 3) {
-    throw new Error(`Invalid HLC format: "${hlcString}". Expected "physical_ms.logical_c.device_id"`);
+    throw new Error(
+      `Invalid HLC format: "${hlcString}". Expected "physical_ms.logical_c.device_id"`
+    );
   }
 
   const l = Number(parts[0]);
@@ -49,10 +51,7 @@ export function formatHlc(hlc: HybridLogicalClock): string {
  *   0 if a == b
  *   1 if a > b
  */
-export function compareHlc(
-  a: HybridLogicalClock | string,
-  b: HybridLogicalClock | string
-): number {
+export function compareHlc(a: HybridLogicalClock | string, b: HybridLogicalClock | string): number {
   const hlcA = typeof a === 'string' ? parseHlc(a) : a;
   const hlcB = typeof b === 'string' ? parseHlc(b) : b;
 

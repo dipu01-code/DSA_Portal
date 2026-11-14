@@ -6,12 +6,7 @@
  */
 
 export type SyncEntity =
-  | 'submission'
-  | 'attempt'
-  | 'user_stats'
-  | 'settings'
-  | 'tombstone'
-  | 'problem';
+  'submission' | 'attempt' | 'user_stats' | 'settings' | 'tombstone' | 'problem';
 
 export type SyncOpType = 'INSERT' | 'UPDATE' | 'DELETE' | 'UPSERT';
 

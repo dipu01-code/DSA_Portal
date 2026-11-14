@@ -9,6 +9,5 @@
     "checkJs": false
   },
   "include": ["src/**/*"],
-  "//": "src/storage + src/sync (Person 2) are excluded until they compile, see CR-020; storage/types.ts still builds via index.ts",
-  "exclude": ["node_modules", "dist", "__tests__", "src/storage", "src/sync"]
+  "exclude": ["node_modules", "dist", "__tests__"]
 }

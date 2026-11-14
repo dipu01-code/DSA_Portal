@@ -16,10 +16,7 @@ const makeProblem = (id: string, topic: Topic, difficulty: Difficulty): Problem 
 
 describe('random-selector', () => {
   it('returns a problem matching topic + difficulty', () => {
-    const problems = [
-      makeProblem('p1', 'Arrays', 'Easy'),
-      makeProblem('p2', 'Strings', 'Medium'),
-    ];
+    const problems = [makeProblem('p1', 'Arrays', 'Easy'), makeProblem('p2', 'Strings', 'Medium')];
     const p = selectRandomProblem(problems, { topic: 'Arrays', difficulty: 'Easy' });
     expect(p).not.toBeNull();
     expect(p?.topic).toBe('Arrays');
@@ -33,10 +30,7 @@ describe('random-selector', () => {
   });
 
   it('avoids recently seen problems when possible', () => {
-    const problems = [
-      makeProblem('p1', 'Arrays', 'Easy'),
-      makeProblem('p2', 'Arrays', 'Easy'),
-    ];
+    const problems = [makeProblem('p1', 'Arrays', 'Easy'), makeProblem('p2', 'Arrays', 'Easy')];
     const p = selectRandomProblem(problems, {
       topic: 'Arrays',
       difficulty: 'Easy',

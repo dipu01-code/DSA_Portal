@@ -70,12 +70,18 @@ export interface SyncStorageAdapter {
   /**
    * Retrieves local user settings with version HLC.
    */
-  getSettings(userId: string): Promise<{ settings: Record<string, unknown>; versionHlc: string } | null>;
+  getSettings(
+    userId: string
+  ): Promise<{ settings: Record<string, unknown>; versionHlc: string } | null>;
 
   /**
    * Saves local user settings with version HLC.
    */
-  saveSettings(userId: string, settings: Record<string, unknown>, versionHlc: string): Promise<void>;
+  saveSettings(
+    userId: string,
+    settings: Record<string, unknown>,
+    versionHlc: string
+  ): Promise<void>;
 }
 
 /**
@@ -118,10 +124,7 @@ export class SqliteSyncStorageAdapter implements SyncStorageAdapter {
           [status, errorMessage || 'Sync failed', id]
         );
       } else {
-        await this.db.execute(
-          `UPDATE local_op_log SET status = ? WHERE op_id = ?`,
-          [status, id]
-        );
+        await this.db.execute(`UPDATE local_op_log SET status = ? WHERE op_id = ?`, [status, id]);
       }
     }
   }
@@ -144,8 +147,7 @@ export class SqliteSyncStorageAdapter implements SyncStorageAdapter {
     hlc: string;
     schemaVersion?: number;
   }): Promise<void> {
-    const payloadStr =
-      typeof op.payload === 'string' ? op.payload : JSON.stringify(op.payload);
+    const payloadStr = typeof op.payload === 'string' ? op.payload : JSON.stringify(op.payload);
 
     await this.db.execute(
       `INSERT INTO local_op_log (
@@ -228,9 +230,7 @@ export class SqliteSyncStorageAdapter implements SyncStorageAdapter {
   }
 
   async applyRemoteOperation(op: SyncOperation): Promise<void> {
-    const payload = (typeof op.payload === 'string'
-      ? JSON.parse(op.payload)
-      : op.payload) as any;
+    const payload = (typeof op.payload === 'string' ? JSON.parse(op.payload) : op.payload) as any;
 
     switch (op.entity) {
       case 'submission': {
@@ -246,9 +246,10 @@ export class SqliteSyncStorageAdapter implements SyncStorageAdapter {
 
         const passed = payload.passed ?? payload.result?.passed ?? 0;
         const total = payload.total ?? payload.result?.total ?? 0;
-        const resultsStr = payload.results || payload.result?.results
-          ? JSON.stringify(payload.results || payload.result?.results)
-          : null;
+        const resultsStr =
+          payload.results || payload.result?.results
+            ? JSON.stringify(payload.results || payload.result?.results)
+            : null;
         const createdAt = payload.createdAt || op.clientTimestamp;
         const judgedAt = payload.judgedAt || createdAt;
 
@@ -282,8 +283,7 @@ export class SqliteSyncStorageAdapter implements SyncStorageAdapter {
 
       case 'settings': {
         const existing = await this.getSettings(op.userId);
-        const shouldApply =
-          !existing || compareHlc(op.hlc, existing.versionHlc) > 0;
+        const shouldApply = !existing || compareHlc(op.hlc, existing.versionHlc) > 0;
 
         if (shouldApply) {
           const newSettings = payload.settings || payload;

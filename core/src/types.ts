@@ -106,9 +106,11 @@ export interface StatsRepository {
     totalProblems: number;
     streak: number;
   }>;
-  getTopicStats(userId: string): Promise<Array<{
-    topic: Topic;
-    attempted: number;
-    solved: number;
-  }>>;
+  getTopicStats(userId: string): Promise<
+    Array<{
+      topic: Topic;
+      attempted: number;
+      solved: number;
+    }>
+  >;
 }

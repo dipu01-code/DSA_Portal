@@ -1,10 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import {
-  PROBLEMS,
-  getProblem,
-  getRandomProblem,
-  listProblems,
-} from '../src/problems';
+import { PROBLEMS, getProblem, getRandomProblem, listProblems } from '../src/problems';
 
 describe('problems', () => {
   it('loads problems from JSON files', () => {

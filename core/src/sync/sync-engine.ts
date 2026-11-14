@@ -8,12 +8,7 @@ import type {
   SyncOpType,
   HybridLogicalClock,
 } from './types';
-import {
-  generateNextHlc,
-  receiveHlc,
-  formatHlc,
-  parseHlc,
-} from './hlc';
+import { generateNextHlc, receiveHlc, formatHlc, parseHlc } from './hlc';
 
 export type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline';
 
@@ -99,7 +94,7 @@ export class SyncEngine {
     this.isStarted = true;
 
     // Trigger initial sync immediately
-    this.syncNow().catch((err) => {
+    this.syncNow().catch(() => {
       // Background initial sync errors are handled via status listener
     });
 
@@ -201,7 +196,6 @@ export class SyncEngine {
    */
   async syncNow(): Promise<SyncResult> {
     if (this.isSyncing) {
-      const pending = await this.pendingCount();
       return {
         pushedCount: 0,
         pulledCount: 0,
@@ -215,7 +209,6 @@ export class SyncEngine {
 
     let totalPushed = 0;
     let totalPulled = 0;
-    let latestWatermark: number | string = '0';
     let hasMore = false;
 
     try {
@@ -267,7 +260,6 @@ export class SyncEngine {
         // Acknowledged: Delete or mark synced
         await this.storage.deleteOperations(pushRes.acknowledgedOpIds);
         totalPushed += pushRes.acknowledgedOpIds.length;
-        latestWatermark = pushRes.serverSeqWatermark;
 
         // Fetch next chunk if available
         pendingOps = await this.storage.getPendingOperations(this.batchSize);
@@ -276,7 +268,7 @@ export class SyncEngine {
       // -------------------------------------------------------------
       // Phase 2: Pull Loop (Cursor-based)
       // -------------------------------------------------------------
-      let lastSeqStr = await this.storage.getSyncState('last_synced_server_seq');
+      const lastSeqStr = await this.storage.getSyncState('last_synced_server_seq');
       let cursor = Number(lastSeqStr) || 0;
 
       let pullMore = true;
@@ -330,10 +322,7 @@ export class SyncEngine {
       if (err?.code === 'SYNC_CURSOR_EXPIRED' && this.transport.bootstrap) {
         try {
           const snapshot = await this.transport.bootstrap();
-          await this.storage.setSyncState(
-            'last_synced_server_seq',
-            String(snapshot.watermarkSeq)
-          );
+          await this.storage.setSyncState('last_synced_server_seq', String(snapshot.watermarkSeq));
           this.currentBackoffMs = this.minBackoffMs;
           this.lastSyncedAt = new Date();
           this.lastError = null;
@@ -388,8 +377,7 @@ export class SyncEngine {
     if (error !== undefined) {
       this.lastError = error;
     }
-    const count =
-      overrideCount !== undefined ? overrideCount : await this.pendingCount();
+    const count = overrideCount !== undefined ? overrideCount : await this.pendingCount();
     const event: SyncStatusEvent = {
       status: this.status,
       lastSyncedAt: this.lastSyncedAt,

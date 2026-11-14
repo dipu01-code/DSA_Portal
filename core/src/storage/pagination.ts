@@ -47,9 +47,7 @@ export function decodeCursor<T extends KeysetCursorPayload = KeysetCursorPayload
       base64 += '=';
     }
     const json =
-      typeof Buffer !== 'undefined'
-        ? Buffer.from(base64, 'base64').toString('utf8')
-        : atob(base64);
+      typeof Buffer !== 'undefined' ? Buffer.from(base64, 'base64').toString('utf8') : atob(base64);
     return JSON.parse(json) as T;
   } catch {
     return null;

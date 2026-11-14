@@ -1,7 +1,4 @@
-import {
-  BetterSqlite3Adapter,
-  initSqliteSchema,
-} from '../../src/storage';
+import { BetterSqlite3Adapter, initSqliteSchema } from '../../src/storage';
 import {
   SqliteSyncStorageAdapter,
   SyncEngine,

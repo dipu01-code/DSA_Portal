@@ -3,12 +3,7 @@ import { promisify } from 'util';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import type {
-  ExecutionResult,
-  PerTestResult,
-  Problem,
-  TestCase,
-} from './types';
+import type { ExecutionResult, PerTestResult, Problem, TestCase } from './types';
 
 export interface SandboxOptions {
   perTestTimeoutMs?: number;
@@ -59,15 +54,31 @@ function prepareFiles(userCode: string, inputs: unknown[]) {
  * node args + options for one sandboxed child that runs `testCount` tests. Shared by the sync and async
  * runners (exported for tests).
  */
-export function childCommand(codePath: string, inputPath: string, options: Required<SandboxOptions>, testCount = 1) {
+export function childCommand(
+  codePath: string,
+  inputPath: string,
+  options: Required<SandboxOptions>,
+  testCount = 1
+) {
   // Node's permission model as a second wall behind the vm: even code that escaped the context could only
   // read the wrapper and this submission's own files (no fs writes, no child processes, no worker threads).
   // Plain `node` only: Electron 28 (desktop, CR-018) is Node 18 and has no permission model.
   const permissions =
     options.nodePath === DEFAULTS.nodePath
-      ? ['--experimental-permission', `--allow-fs-read=${SANDBOX_EXEC_PATH}`, `--allow-fs-read=${path.dirname(codePath)}`]
+      ? [
+          '--experimental-permission',
+          `--allow-fs-read=${SANDBOX_EXEC_PATH}`,
+          `--allow-fs-read=${path.dirname(codePath)}`,
+        ]
       : [];
-  const args = [...permissions, SANDBOX_EXEC_PATH, codePath, inputPath, String(options.outputCap), String(options.perTestTimeoutMs)];
+  const args = [
+    ...permissions,
+    SANDBOX_EXEC_PATH,
+    codePath,
+    inputPath,
+    String(options.outputCap),
+    String(options.perTestTimeoutMs),
+  ];
   const execOptions = {
     encoding: 'utf8' as const,
     // V8 stops each test at perTestTimeoutMs inside the child; killing the child is the backstop (+1 s for Node to start).
@@ -84,7 +95,12 @@ export function childCommand(codePath: string, inputPath: string, options: Requi
 }
 
 /** Plain messages for learners; raw errors would also show server file paths. */
-function crashMessage(err: unknown, options: Required<SandboxOptions>, timeoutMs: number, elapsedMs: number) {
+function crashMessage(
+  err: unknown,
+  options: Required<SandboxOptions>,
+  timeoutMs: number,
+  elapsedMs: number
+) {
   const e = err as { message?: string; code?: unknown; signal?: string | null };
   // Measured, not guessed from exit codes: an out-of-memory crash or an oversized result
   // also kills the child, but long before the time limit.
@@ -108,21 +124,45 @@ function toResults(
 ): PerTestResult[] {
   const lines = stdout.split('\n').slice(0, -1); // only newline-terminated lines are complete
   return tcs.map((tc, i) => {
-    const base = { id: tc.id ?? `test-${i}`, passed: false, expected: tc.expected, actual: undefined as unknown, runtimeMs: 0 };
+    const base = {
+      id: tc.id ?? `test-${i}`,
+      passed: false,
+      expected: tc.expected,
+      actual: undefined as unknown,
+      runtimeMs: 0,
+    };
     const line = lines[i];
     if (line === undefined) {
-      if (i > lines.length) return { ...base, error: 'Not run: the sandbox stopped at an earlier test' };
-      return { ...base, error: err === undefined ? 'No result from the sandbox' : crashMessage(err, options, timeoutMs, elapsedMs) };
+      if (i > lines.length) {
+        return { ...base, error: 'Not run: the sandbox stopped at an earlier test' };
+      }
+      return {
+        ...base,
+        error:
+          err === undefined
+            ? 'No result from the sandbox'
+            : crashMessage(err, options, timeoutMs, elapsedMs),
+      };
     }
     if (line.length > options.outputCap + 4096) return { ...base, error: 'Output too large' };
     const parsed = JSON.parse(line);
-    if (parsed.status === 'timeout') return { ...base, error: `Test timed out after ${options.perTestTimeoutMs}ms` };
-    const result = { ...base, runtimeMs: parsed.runtimeMs ?? 0, actual: parsed.result, output: parsed.output };
+    if (parsed.status === 'timeout') {
+      return { ...base, error: `Test timed out after ${options.perTestTimeoutMs}ms` };
+    }
+    const result = {
+      ...base,
+      runtimeMs: parsed.runtimeMs ?? 0,
+      actual: parsed.result,
+      output: parsed.output,
+    };
     if (parsed.status === 'error' || parsed.error) return { ...result, error: parsed.error };
     const passed = deepEqual(parsed.result, tc.expected);
     return passed
       ? { ...result, passed }
-      : { ...result, error: `Expected ${JSON.stringify(tc.expected)}, got ${JSON.stringify(parsed.result)}` };
+      : {
+          ...result,
+          error: `Expected ${JSON.stringify(tc.expected)}, got ${JSON.stringify(parsed.result)}`,
+        };
   });
 }
 
@@ -133,21 +173,12 @@ function deepEqual(a: unknown, b: unknown): boolean {
     if (a.length !== b.length) return false;
     return a.every((v, i) => deepEqual(v, b[i]));
   }
-  if (
-    typeof a === 'object' &&
-    a !== null &&
-    typeof b === 'object' &&
-    b !== null
-  ) {
+  if (typeof a === 'object' && a !== null && typeof b === 'object' && b !== null) {
     const ka = Object.keys(a as Record<string, unknown>);
     const kb = Object.keys(b as Record<string, unknown>);
     if (ka.length !== kb.length) return false;
-    return ka.every(
-      (k) =>
-        deepEqual(
-          (a as Record<string, unknown>)[k],
-          (b as Record<string, unknown>)[k]
-        )
+    return ka.every((k) =>
+      deepEqual((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k])
     );
   }
   return false;
@@ -173,16 +204,25 @@ export function submitCodeSandbox(
   options: SandboxOptions = {}
 ): ExecutionResult {
   const cfg = { ...DEFAULTS, ...options };
-  const { codePath, inputPath, cleanup } = prepareFiles(userCode, problem.testCases.map((tc) => tc.input));
+  const { codePath, inputPath, cleanup } = prepareFiles(
+    userCode,
+    problem.testCases.map((tc) => tc.input)
+  );
   const { args, execOptions } = childCommand(codePath, inputPath, cfg, problem.testCases.length);
   const started = Date.now();
   try {
     // Drop child stderr so untrusted code (or an OOM crash dump) cannot flood the host's logs.
-    const stdout = execFileSync(cfg.nodePath, args, { ...execOptions, stdio: ['ignore', 'pipe', 'ignore'] });
+    const stdout = execFileSync(cfg.nodePath, args, {
+      ...execOptions,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
     return finish(problem, toResults(problem.testCases, cfg, execOptions.timeout, stdout));
   } catch (err) {
     const stdout = String((err as { stdout?: unknown }).stdout ?? '');
-    return finish(problem, toResults(problem.testCases, cfg, execOptions.timeout, stdout, err, Date.now() - started));
+    return finish(
+      problem,
+      toResults(problem.testCases, cfg, execOptions.timeout, stdout, err, Date.now() - started)
+    );
   } finally {
     cleanup();
   }
@@ -195,7 +235,10 @@ export async function submitCodeSandboxAsync(
   options: SandboxOptions = {}
 ): Promise<ExecutionResult> {
   const cfg = { ...DEFAULTS, ...options };
-  const { codePath, inputPath, cleanup } = prepareFiles(userCode, problem.testCases.map((tc) => tc.input));
+  const { codePath, inputPath, cleanup } = prepareFiles(
+    userCode,
+    problem.testCases.map((tc) => tc.input)
+  );
   const { args, execOptions } = childCommand(codePath, inputPath, cfg, problem.testCases.length);
   const started = Date.now();
   try {
@@ -204,7 +247,10 @@ export async function submitCodeSandboxAsync(
     return finish(problem, toResults(problem.testCases, cfg, execOptions.timeout, stdout));
   } catch (err) {
     const stdout = String((err as { stdout?: unknown }).stdout ?? '');
-    return finish(problem, toResults(problem.testCases, cfg, execOptions.timeout, stdout, err, Date.now() - started));
+    return finish(
+      problem,
+      toResults(problem.testCases, cfg, execOptions.timeout, stdout, err, Date.now() - started)
+    );
   } finally {
     cleanup();
   }

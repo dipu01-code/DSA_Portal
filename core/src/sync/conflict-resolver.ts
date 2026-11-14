@@ -62,9 +62,7 @@ export class ConflictResolver {
     const attempts = sorted.length;
     const solvedSub = sorted.find((s) => s.passed === s.total && s.total > 0);
     const solved = Boolean(solvedSub);
-    const firstSolvedAt = solvedSub
-      ? new Date(solvedSub.createdAt).toISOString()
-      : null;
+    const firstSolvedAt = solvedSub ? new Date(solvedSub.createdAt).toISOString() : null;
     const lastAttemptedAt = new Date(sorted[sorted.length - 1].createdAt).toISOString();
 
     return {

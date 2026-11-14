@@ -1,10 +1,4 @@
-import {
-  parseHlc,
-  formatHlc,
-  compareHlc,
-  generateNextHlc,
-  receiveHlc,
-} from '../../src/sync/hlc';
+import { parseHlc, formatHlc, compareHlc, generateNextHlc, receiveHlc } from '../../src/sync/hlc';
 
 describe('Hybrid Logical Clock (HLC)', () => {
   const deviceA = 'devA';
@@ -53,7 +47,7 @@ describe('Hybrid Logical Clock (HLC)', () => {
 
     // Case 2: physical clock ahead of both
     const updated2 = receiveHlc(local, remote, deviceA, 10020);
-    expect(updated2.l).toBe(1020 ? 10020 : 10020);
+    expect(updated2.l).toBe(10020);
     expect(updated2.c).toBe(0);
   });
 
