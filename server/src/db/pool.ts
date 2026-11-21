@@ -22,9 +22,18 @@ pool.on('error', (err: Error) => {
 });
 
 /**
+ * Returns the shared pool instance (used by health/metrics services).
+ */
+export function getPool(): Pool {
+  return pool;
+}
+
+export type PoolMetrics = { totalCount: number; idleCount: number; waitingCount: number };
+
+/**
  * Returns live connection pool metrics for observability and health endpoints.
  */
-export function getPoolMetrics() {
+export function getPoolMetrics(): PoolMetrics {
   return {
     totalCount: pool.totalCount,
     idleCount: pool.idleCount,
