@@ -1,9 +1,11 @@
 # Handover — Day 10, Person 2 (FINAL)
 
 ## What was built
+
 Day 10 delivers the final integration smoke test suite, full test matrix verification, and viva defense preparation materials. This completes all Person 2 deliverables across the 10-day project.
 
 ### Today's Deliverables
+
 1. **End-to-End Integration Smoke Tests** (`core/__tests__/integration/smoke.test.ts`):
    - 15 tests spanning all Person 2 layers: HLC clock monotonicity, SyncEngine offline stability, Keyset pagination round-trips, Backup tamper detection, Health probe failover, Prometheus metrics exposition, and Migration file completeness audit.
 2. **Pool `getPool()` / `PoolMetrics` Exports** (`server/src/db/pool.ts`):
@@ -26,17 +28,20 @@ Time:        ~1.0s
 ## Full Delivery Inventory
 
 ### Database Layer
+
 - Migrations `001` → `004` (initial schema → sync tables → performance indexes → security roles)
 - PostgreSQL connection pool with tuned config, `withTransaction`, `checkDbHealth`, `getPoolMetrics`
 - `mv_leaderboard` materialized view + `refresh_leaderboard(p_concurrent)` procedure
 - Keyset pagination helpers: `encodeCursor`, `decodeCursor`, `buildKeysetClause`, `paginateKeyset`
 
 ### Storage Abstraction
+
 - `DatabaseAdapter` universal interface (PostgreSQL + SQLite compatible)
 - `BetterSqlite3Adapter` with WAL mode
 - Repositories: Problem, Submission, User, Stats, Audit
 
 ### Sync Engine
+
 - `HLC` (Hybrid Logical Clock) implementation
 - `SyncStorageAdapter` (pluggable: SQLite, Expo-SQLite, any)
 - `ConflictResolver` (append-only submissions, LWW settings, recomputed stats)
@@ -44,6 +49,7 @@ Time:        ~1.0s
 - Server: `POST /api/v1/sync/push` and `GET /api/v1/sync/pull?cursor=`
 
 ### Scripts & Automation
+
 - `scripts/seed.ts` — 40 problems idempotent seeder
 - `scripts/seed-load.ts` — 10k users / 100k subs UNNEST bulk loader (~2.2s)
 - `scripts/benchmark-queries.ts` — EXPLAIN BUFFERS for 10 core queries
@@ -51,6 +57,7 @@ Time:        ~1.0s
 - `scripts/restore-db.ts` + `restore-db.sh` — checksum-verified restore with smoke validation
 
 ### Infrastructure
+
 - Dev: `infra/docker-compose.yml` (PostgreSQL + Redis)
 - Prod: `infra/docker-compose.prod.yml` (5-service: Nginx + Server + Worker + PostgreSQL + Redis)
 - Nginx: `infra/nginx/nginx.conf` (rate limiting, WebSocket, security headers)
@@ -59,11 +66,13 @@ Time:        ~1.0s
 - Monitoring: `infra/monitoring/prometheus.yml` + `infra/monitoring/alerts.yml`
 
 ### Observability
+
 - `server/src/health/health.service.ts` → `/health/live` + `/health/ready`
 - `server/src/metrics/metrics.service.ts` → `/metrics` (Prometheus exposition)
 - Alert rules: pool saturation, database down, query latency, sync conflicts
 
 ### Documentation
+
 - `docs/db/sync-design.md` — offline-first sync spec with 4 Mermaid diagrams
 - `docs/db/optimization-report.md` — before/after benchmark table
 - `docs/db/backup-and-dr.md` — DR playbook with RPO < 1hr, RTO < 5min
@@ -78,8 +87,8 @@ Time:        ~1.0s
 
 ## Viva Defense: The 3 Numbers to Remember
 
-| Metric | Before | After | Speedup |
-| :----- | :----: | :---: | :-----: |
-| Leaderboard query (`mv_leaderboard`) | 220.64 ms | 0.02 ms | **~6,900×** |
-| Deep pagination (`OFFSET 50k` → Keyset) | 25.59 ms | 0.02 ms | **~1,112×** |
-| Integration test suite runtime | — | **91 tests in ~1.0s** | ✅ |
+| Metric                                  |  Before   |         After         |   Speedup   |
+| :-------------------------------------- | :-------: | :-------------------: | :---------: |
+| Leaderboard query (`mv_leaderboard`)    | 220.64 ms |        0.02 ms        | **~6,900×** |
+| Deep pagination (`OFFSET 50k` → Keyset) | 25.59 ms  |        0.02 ms        | **~1,112×** |
+| Integration test suite runtime          |     —     | **91 tests in ~1.0s** |     ✅      |

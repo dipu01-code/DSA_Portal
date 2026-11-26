@@ -26,19 +26,20 @@ $$\text{connections} = ((\text{CPU Cores} \times 2) + \text{Effective Spindle Co
 import { Pool, PoolClient } from 'pg';
 
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/dsa_portal',
-  max: Number(process.env.DB_POOL_MAX || 20),           // Pool ceiling to protect database memory
-  min: Number(process.env.DB_POOL_MIN || 4),            // Warm connections ready for immediate requests
-  idleTimeoutMillis: 30000,                             // Reap idle sockets after 30 seconds
-  connectionTimeoutMillis: 5000,                        // Fail fast (5s) if database is saturated
-  statement_timeout: 5000,                              // Kill runaway queries after 5 seconds
+  connectionString:
+    process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/dsa_portal',
+  max: Number(process.env.DB_POOL_MAX || 20), // Pool ceiling to protect database memory
+  min: Number(process.env.DB_POOL_MIN || 4), // Warm connections ready for immediate requests
+  idleTimeoutMillis: 30000, // Reap idle sockets after 30 seconds
+  connectionTimeoutMillis: 5000, // Fail fast (5s) if database is saturated
+  statement_timeout: 5000, // Kill runaway queries after 5 seconds
 });
 
 export function getPoolMetrics() {
   return {
     totalCount: pool.totalCount,
     idleCount: pool.idleCount,
-    waitingCount: pool.waitingCount,                    // Key indicator of query queueing
+    waitingCount: pool.waitingCount, // Key indicator of query queueing
   };
 }
 ```
@@ -51,9 +52,7 @@ Critical business operations (such as code judging, user balance changes, or syn
 
 ```typescript
 // server/src/db/pool.ts
-export async function withTransaction<T>(
-  callback: (client: PoolClient) => Promise<T>
-): Promise<T> {
+export async function withTransaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -95,13 +94,17 @@ async findById(id: string): Promise<Problem | null> {
 The backend decouples SQL statements from business routes through strongly-typed repository classes in `server/src/db/repositories/`:
 
 ### 5.1 `PostgresSubmissionRepository`
+
 Handles submission lifecycle (CRUD operations):
+
 - `save(submission)`: Inserts queued submission records with JSONB results.
 - `findById(id)`: Fetches execution status for client polling.
 - `findByUser(userId, limit, offset)`: Retrieves paginated history.
 
 ### 5.2 `PostgresStatsRepository`
+
 Implements user progress reporting:
+
 - `getUserStats(userId)`: Pre-aggregated score, attempted count, solved count, and streak.
 - `getTopicStats(userId)`: Per-topic breakdown for analytics charts.
 

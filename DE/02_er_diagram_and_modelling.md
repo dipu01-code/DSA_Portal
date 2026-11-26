@@ -5,7 +5,9 @@
 The database comprises 11 distinct entities designed to model the complete lifecycle of DSA problem discovery, submission execution, stats tracking, security, and distributed synchronization:
 
 ### 1.1 `users`
+
 Represents registered users and administrators on the platform.
+
 - `id` (`UUID`, PK): Unique identifier, generated via `gen_random_uuid()`.
 - `username` (`VARCHAR(50)`, UNIQUE, NOT NULL): User handle with `CHECK (length(username) >= 3)`.
 - `email` (`VARCHAR(255)`, UNIQUE, NOT NULL): Validated email format via regex `CHECK`.
@@ -15,7 +17,9 @@ Represents registered users and administrators on the platform.
 - `updated_at` (`TIMESTAMPTZ`, NOT NULL): Profile modification timestamp.
 
 ### 1.2 `sessions`
+
 Tracks active user authentication sessions and refresh tokens.
+
 - `id` (`UUID`, PK): Session identifier.
 - `user_id` (`UUID`, FK $\rightarrow$ `users.id`, NOT NULL): Owning user.
 - `token_hash` (`VARCHAR(64)`, UNIQUE, NOT NULL): SHA-256 hash of refresh token.
@@ -25,7 +29,9 @@ Tracks active user authentication sessions and refresh tokens.
 - `created_at` (`TIMESTAMPTZ`, NOT NULL): Session creation timestamp.
 
 ### 1.3 `problems`
+
 The core DSA problem entity.
+
 - `id` (`UUID`, PK): Problem identifier.
 - `slug` (`VARCHAR(100)`, UNIQUE, NOT NULL): URL-friendly unique identifier (e.g., `'two-sum'`).
 - `title` (`VARCHAR(255)`, NOT NULL): Human-readable problem title.
@@ -38,7 +44,9 @@ The core DSA problem entity.
 - `updated_at` (`TIMESTAMPTZ`, NOT NULL): Problem last edit timestamp.
 
 ### 1.4 `test_cases`
+
 Input and expected output pairs for code evaluation.
+
 - `id` (`UUID`, PK): Test case identifier.
 - `problem_id` (`UUID`, FK $\rightarrow$ `problems.id`, NOT NULL): Target problem.
 - `sort_order` (`INT`, NOT NULL): Ordering sequence for display and testing.
@@ -48,7 +56,9 @@ Input and expected output pairs for code evaluation.
 - `created_at` (`TIMESTAMPTZ`, NOT NULL): Timestamp.
 
 ### 1.5 `hints`
+
 Progressive hints unlocked during problem solving.
+
 - `id` (`UUID`, PK): Hint identifier.
 - `problem_id` (`UUID`, FK $\rightarrow$ `problems.id`, NOT NULL): Target problem.
 - `level` (`INT`, NOT NULL): Progressive hint level ($1, 2, 3\dots$) with `CHECK (level >= 1)`.
@@ -56,7 +66,9 @@ Progressive hints unlocked during problem solving.
 - `created_at` (`TIMESTAMPTZ`, NOT NULL): Timestamp.
 
 ### 1.6 `solutions`
+
 Official verified reference solutions.
+
 - `id` (`UUID`, PK): Solution identifier.
 - `problem_id` (`UUID`, FK $\rightarrow$ `problems.id`, UNIQUE, NOT NULL): 1:1 relation to parent problem.
 - `code` (`TEXT`, NOT NULL): Canonical reference code.
@@ -64,13 +76,17 @@ Official verified reference solutions.
 - `created_at` (`TIMESTAMPTZ`, NOT NULL): Timestamp.
 
 ### 1.7 `daily_challenges`
+
 Tracks the featured DSA problem of the day.
+
 - `challenge_date` (`DATE`, PK): Date of the challenge (`CURRENT_DATE`).
 - `problem_id` (`UUID`, FK $\rightarrow$ `problems.id`, NOT NULL): Selected problem.
 - `created_at` (`TIMESTAMPTZ`, NOT NULL): Scheduling timestamp.
 
 ### 1.8 `submissions`
+
 Transactional history of user code submissions.
+
 - `id` (`UUID`, PK): Unique submission identifier.
 - `user_id` (`UUID`, FK $\rightarrow$ `users.id`, NOT NULL): Submitting user.
 - `problem_id` (`UUID`, FK $\rightarrow$ `problems.id`, NOT NULL): Submitted problem.
@@ -83,7 +99,9 @@ Transactional history of user code submissions.
 - `judged_at` (`TIMESTAMPTZ`): Execution completion timestamp.
 
 ### 1.9 `user_problem_stats`
+
 Associative progression state resolving the N:M relationship between `users` and `problems`.
+
 - `id` (`UUID`, PK): Stats identifier.
 - `user_id` (`UUID`, FK $\rightarrow$ `users.id`, NOT NULL): User.
 - `problem_id` (`UUID`, FK $\rightarrow$ `problems.id`, NOT NULL): Problem.
@@ -93,7 +111,9 @@ Associative progression state resolving the N:M relationship between `users` and
 - `last_attempted_at` (`TIMESTAMPTZ`, NOT NULL): Most recent submission attempt.
 
 ### 1.10 `audit_log`
+
 Immutable, tamper-proof administrative log.
+
 - `id` (`BIGINT`, GENERATED ALWAYS AS IDENTITY, PK): Monotonic sequence ID.
 - `actor_id` (`UUID`, FK $\rightarrow$ `users.id`): Administrator who performed the action.
 - `action` (`VARCHAR(100)`, NOT NULL): Action identifier (e.g., `'PROBLEM_UPDATE'`).
@@ -105,7 +125,9 @@ Immutable, tamper-proof administrative log.
 - `created_at` (`TIMESTAMPTZ`, NOT NULL): Event timestamp.
 
 ### 1.11 `sync_op_log`
+
 Distributed operation log for offline-first replication.
+
 - `device_id` (`VARCHAR(64)`, NOT NULL): Physical client device identifier.
 - `op_id` (`UUID`, NOT NULL): Client-generated operation UUID.
 - `user_id` (`UUID`, FK $\rightarrow$ `users.id`, NOT NULL): User context.
@@ -120,19 +142,19 @@ Distributed operation log for offline-first replication.
 
 ## 2. Primary Keys & Foreign Keys Summary
 
-| Entity | Primary Key | Foreign Keys (FK) & Target | On Delete Behavior |
-| :--- | :--- | :--- | :--- |
-| `users` | `id` | None | N/A |
-| `sessions` | `id` | `user_id` $\rightarrow$ `users(id)` | `CASCADE` |
-| `problems` | `id` | None | N/A |
-| `test_cases` | `id` | `problem_id` $\rightarrow$ `problems(id)` | `CASCADE` |
-| `hints` | `id` | `problem_id` $\rightarrow$ `problems(id)` | `CASCADE` |
-| `solutions` | `id` | `problem_id` $\rightarrow$ `problems(id)` | `CASCADE` |
-| `daily_challenges` | `challenge_date` | `problem_id` $\rightarrow$ `problems(id)` | `CASCADE` |
-| `submissions` | `id` | `user_id` $\rightarrow$ `users(id)`, `problem_id` $\rightarrow$ `problems(id)` | `CASCADE` |
-| `user_problem_stats` | `id` | `user_id` $\rightarrow$ `users(id)`, `problem_id` $\rightarrow$ `problems(id)` | `CASCADE` |
-| `audit_log` | `id` | `actor_id` $\rightarrow$ `users(id)` | `SET NULL` |
-| `sync_op_log` | `(device_id, op_id)` | `user_id` $\rightarrow$ `users(id)` | `CASCADE` |
+| Entity               | Primary Key          | Foreign Keys (FK) & Target                                                     | On Delete Behavior |
+| :------------------- | :------------------- | :----------------------------------------------------------------------------- | :----------------- |
+| `users`              | `id`                 | None                                                                           | N/A                |
+| `sessions`           | `id`                 | `user_id` $\rightarrow$ `users(id)`                                            | `CASCADE`          |
+| `problems`           | `id`                 | None                                                                           | N/A                |
+| `test_cases`         | `id`                 | `problem_id` $\rightarrow$ `problems(id)`                                      | `CASCADE`          |
+| `hints`              | `id`                 | `problem_id` $\rightarrow$ `problems(id)`                                      | `CASCADE`          |
+| `solutions`          | `id`                 | `problem_id` $\rightarrow$ `problems(id)`                                      | `CASCADE`          |
+| `daily_challenges`   | `challenge_date`     | `problem_id` $\rightarrow$ `problems(id)`                                      | `CASCADE`          |
+| `submissions`        | `id`                 | `user_id` $\rightarrow$ `users(id)`, `problem_id` $\rightarrow$ `problems(id)` | `CASCADE`          |
+| `user_problem_stats` | `id`                 | `user_id` $\rightarrow$ `users(id)`, `problem_id` $\rightarrow$ `problems(id)` | `CASCADE`          |
+| `audit_log`          | `id`                 | `actor_id` $\rightarrow$ `users(id)`                                           | `SET NULL`         |
+| `sync_op_log`        | `(device_id, op_id)` | `user_id` $\rightarrow$ `users(id)`                                            | `CASCADE`          |
 
 ---
 

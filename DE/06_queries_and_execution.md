@@ -5,6 +5,7 @@ This document presents **10 production queries** that power core platform featur
 ---
 
 ### Query 1: Random Problem Recommendation by Topic & Difficulty (SELECT + Filter + Subquery + Join)
+
 - **Business Use Case**: When a student requests a new practice problem in a specific category (e.g. `'Arrays'`, `'Medium'`), the system picks a random problem that the user has **not yet solved**.
 - **SQL Query**:
   ```sql
@@ -40,6 +41,7 @@ This document presents **10 production queries** that power core platform featur
 ---
 
 ### Query 2: Atomic Submission Judging & Stats Upsert (INSERT / UPDATE with ON CONFLICT)
+
 - **Business Use Case**: Executed atomically when the worker completes judging a submission. It logs the submission and updates or inserts the student's aggregate progress in a single transaction.
 - **SQL Query**:
   ```sql
@@ -70,6 +72,7 @@ This document presents **10 production queries** that power core platform featur
 ---
 
 ### Query 3: User Submission History (Covering Index-Only Scan)
+
 - **Business Use Case**: Renders the student's submission history tab with problem titles and status, without accessing the physical table heap.
 - **SQL Query**:
   ```sql
@@ -91,6 +94,7 @@ This document presents **10 production queries** that power core platform featur
 ---
 
 ### Query 4: Per-Topic Mastery Breakdown (Aggregates + GROUP BY + Filter)
+
 - **Business Use Case**: Powers the user analytics dashboard radar chart, computing attempted vs. solved ratios across topics.
 - **SQL Query**:
   ```sql
@@ -121,6 +125,7 @@ This document presents **10 production queries** that power core platform featur
 ---
 
 ### Query 5: Global Leaderboard Retrieval via Concurrent Materialized View (Ranking + Window Functions)
+
 - **Business Use Case**: Fetches the top 50 ranked students globally based on weighted problem difficulty (Easy = 1pt, Medium = 2pts, Hard = 3pts).
 - **SQL Query**:
   ```sql
@@ -142,6 +147,7 @@ This document presents **10 production queries** that power core platform featur
 ---
 
 ### Query 6: Active Practice Streak Calculation (CTEs + Window Functions + Distinct Dates)
+
 - **Business Use Case**: Calculates consecutive days practiced by a user to display their current gamified streak counter.
 - **SQL Query**:
   ```sql
@@ -176,6 +182,7 @@ This document presents **10 production queries** that power core platform featur
 ---
 
 ### Query 7: Daily Challenge Retrieval with Completion Status (LEFT JOIN + Date Match)
+
 - **Business Use Case**: Returns today's featured daily challenge along with a boolean indicating whether the logged-in student has already completed it.
 - **SQL Query**:
   ```sql
@@ -204,6 +211,7 @@ This document presents **10 production queries** that power core platform featur
 ---
 
 ### Query 8: High-Performance Keyset (Cursor) Pagination for Submissions Feed
+
 - **Business Use Case**: Deep-scroll activity feed. Replaces slow `OFFSET 50000` with constant-time $O(\log N)$ cursor pagination.
 - **SQL Query**:
   ```sql
@@ -219,6 +227,7 @@ This document presents **10 production queries** that power core platform featur
 ---
 
 ### Query 9: Incremental Sync OpLog Pull (Monotonic Server Sequence Range Scan)
+
 - **Business Use Case**: Offline mobile and desktop clients request incremental changes since their last recorded cursor.
 - **SQL Query**:
   ```sql
@@ -234,6 +243,7 @@ This document presents **10 production queries** that power core platform featur
 ---
 
 ### Query 10: Platform Moderation & Top Contributors (GROUP BY + HAVING + Aggregates)
+
 - **Business Use Case**: Administrative reporting finding power users with more than 50 verified solved problems and a minimum 70% success rate.
 - **SQL Query**:
   ```sql

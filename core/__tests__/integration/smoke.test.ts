@@ -5,23 +5,8 @@
  * are wired together and produce expected results end-to-end.
  * Runs entirely offline (no live database required) except security-roles.test.ts.
  */
-import {
-  generateNextHlc,
-  receiveHlc,
-  compareHlc,
-  parseHlc,
-  formatHlc,
-} from '../../src/sync/hlc';
-import {
-  SyncEngine,
-  SqliteSyncStorageAdapter,
-  type SyncTransport,
-  type SyncPushRequest,
-  type SyncPushResponse,
-  type SyncPullRequest,
-  type SyncPullResponse,
-  type SyncBootstrapResponse,
-} from '../../src/sync';
+import { generateNextHlc, receiveHlc, compareHlc, parseHlc, formatHlc } from '../../src/sync/hlc';
+import { SyncEngine, SqliteSyncStorageAdapter, type SyncTransport } from '../../src/sync';
 import { BetterSqlite3Adapter, initSqliteSchema } from '../../src/storage';
 import {
   encodeCursor,
@@ -225,10 +210,7 @@ describe('[Integration] Prometheus Metrics Exposition', () => {
 
 // ─── 7. Schema Migration File Completeness Audit ─────────────────────────────
 describe('[Integration] Schema Migration File Completeness', () => {
-  const migrationsDir = path.resolve(
-    __dirname,
-    '../../../server/src/db/migrations'
-  );
+  const migrationsDir = path.resolve(__dirname, '../../../server/src/db/migrations');
 
   it('every migration has both a matching .up.sql and .down.sql file', () => {
     const files = fs.readdirSync(migrationsDir);

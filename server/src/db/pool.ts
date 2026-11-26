@@ -110,10 +110,3 @@ export async function checkDbHealth(): Promise<{ ok: boolean; latencyMs: number;
 export async function closePool(): Promise<void> {
   await pool.end();
 }
-
-export type PoolMetrics = ReturnType<typeof getPoolMetrics>;
-
-/** The shared pool, for services that take an injectable Pool (health checks). */
-export function getPool(): Pool {
-  return pool;
-}
