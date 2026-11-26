@@ -70,7 +70,7 @@ describe('sync, health and metrics routes on PostgreSQL', () => {
     expect(res.statusCode).toBe(401);
   });
 
-  it('push stores a submission and its stats once (idempotent by opId), pull returns it', async () => {
+  it('push queues a submission for server judging (idempotent by opId), pull returns it', async () => {
     const id = randomUUID();
     const o = op({ id, problemSlug: slug, code: 'x', status: 'judged', passed: 2, total: 2 });
     const first = await push(alice, [o]);
@@ -86,7 +86,12 @@ describe('sync, health and metrics routes on PostgreSQL', () => {
       `SELECT attempts, solved FROM user_problem_stats ups JOIN problems p ON p.id = ups.problem_id WHERE ups.user_id = $1 AND p.slug = $2`,
       [alice, slug]
     );
-    expect(stats.rows).toEqual([{ attempts: 1, solved: true }]);
+    // The client claimed 2/2 passed; the server ignores that until its own worker judges the code.
+    expect(stats.rows).toEqual([{ attempts: 1, solved: false }]);
+    const sub = await pool.query('SELECT status, passed, total FROM submissions WHERE id = $1', [
+      id,
+    ]);
+    expect(sub.rows).toEqual([{ status: 'queued', passed: 0, total: 0 }]);
 
     const pull = await app.inject({
       method: 'GET',
@@ -109,6 +114,20 @@ describe('sync, health and metrics routes on PostgreSQL', () => {
     expect(row.rows).toEqual([{ user_id: alice, passed: 0 }]);
   });
 
+  it("can't rewrite the verdict of your own existing submission", async () => {
+    const id = randomUUID();
+    await push(alice, [op({ id, problemSlug: slug, code: 'mine' })]);
+    await pool.query(
+      `UPDATE submissions SET status = 'judged', passed = 0, total = 2 WHERE id = $1`,
+      [id]
+    );
+    await push(alice, [
+      op({ id, problemSlug: slug, code: 'x', status: 'judged', passed: 2, total: 2 }),
+    ]);
+    const row = await pool.query('SELECT code, passed, total FROM submissions WHERE id = $1', [id]);
+    expect(row.rows).toEqual([{ code: 'mine', passed: 0, total: 2 }]);
+  });
+
   it('bootstrap returns a snapshot for the signed-in user', async () => {
     const res = await app.inject({
       method: 'GET',
@@ -126,5 +145,22 @@ describe('sync, health and metrics routes on PostgreSQL', () => {
     const metrics = await app.inject({ method: 'GET', url: '/metrics' });
     expect(metrics.statusCode).toBe(200);
     expect(metrics.headers['content-type']).toContain('text/plain');
+  });
+
+  it('locks /metrics behind METRICS_TOKEN when it is set', async () => {
+    process.env.METRICS_TOKEN = 'scrape-secret';
+    try {
+      const get = (authorization?: string) =>
+        app.inject({
+          method: 'GET',
+          url: '/metrics',
+          headers: authorization ? { authorization } : {},
+        });
+      expect((await get()).statusCode).toBe(401);
+      expect((await get('Bearer wrong')).statusCode).toBe(401);
+      expect((await get('Bearer scrape-secret')).statusCode).toBe(200);
+    } finally {
+      delete process.env.METRICS_TOKEN;
+    }
   });
 });

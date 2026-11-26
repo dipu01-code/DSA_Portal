@@ -256,42 +256,19 @@ export class SyncService {
         const problemUuid = probRes.rows[0].id;
         const subId = payload.id;
         const code = payload.code || '';
-        const status = payload.status || 'judged';
-        const passed = Number(payload.passed ?? payload.result?.passed ?? 0);
-        const total = Number(payload.total ?? payload.result?.total ?? 0);
-        const resultsJson =
-          payload.results || payload.result?.results
-            ? JSON.stringify(payload.results || payload.result?.results)
-            : null;
         const createdAt = payload.createdAt
           ? new Date(payload.createdAt)
           : new Date(op.clientTimestamp);
-        const judgedAt = payload.judgedAt ? new Date(payload.judgedAt) : new Date();
 
-        // 1. Insert or update submission
+        // 1. Insert as 'queued' so the worker re-judges it on the server: a client-sent verdict
+        // (status/passed/total/results) is never trusted, or anyone could mark problems solved.
+        // An existing row is never changed, whoever owns it.
         const subSql = `
-          INSERT INTO submissions (id, user_id, problem_id, code, status, passed, total, results, created_at, judged_at)
-          VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, $8, $9, $10)
-          ON CONFLICT (id) DO UPDATE SET
-            status = EXCLUDED.status,
-            passed = EXCLUDED.passed,
-            total = EXCLUDED.total,
-            results = EXCLUDED.results,
-            judged_at = EXCLUDED.judged_at
-          WHERE submissions.user_id = EXCLUDED.user_id; -- never overwrite another user's submission
+          INSERT INTO submissions (id, user_id, problem_id, code, created_at)
+          VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5)
+          ON CONFLICT (id) DO NOTHING;
         `;
-        await client.query(subSql, [
-          subId,
-          userId,
-          problemUuid,
-          code,
-          status,
-          passed,
-          total,
-          resultsJson,
-          createdAt,
-          judgedAt,
-        ]);
+        await client.query(subSql, [subId, userId, problemUuid, code, createdAt]);
 
         // 2. Authoritative recomputation of user_problem_stats
         const statsSql = `

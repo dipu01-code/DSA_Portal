@@ -1,8 +1,51 @@
+import { randomBytes } from 'crypto';
+import bcrypt from 'bcryptjs';
 import { validateProblem } from '@dsa-portal/core';
 import { pool, closePool } from './pool';
 import { PostgresProblemRepository } from './repositories/problem.repository';
 import { PostgresUserRepository } from './repositories/user.repository';
 import { SEED_PROBLEMS } from './seeds/problems-data';
+
+/** bcrypt hash for password123 (CR-012). Public in this repo, so it must never guard a production account. */
+const DEV_PASSWORD_HASH = '$2a$10$iBVruH6tb4eMv2wF.RPFT.XkkhjjPIQ/wpSU2mR.2VuHIDY8E1T2y';
+const DEMO_USER_IDS = [
+  '00000000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000002',
+];
+
+/**
+ * Production: the demo accounts' password is SEED_ADMIN_PASSWORD, or, when that is unset, a random one
+ * nobody knows (the accounts are locked). Elsewhere: password123, for local development and tests.
+ */
+function demoPasswordHash(): string {
+  if (process.env.NODE_ENV !== 'production') return DEV_PASSWORD_HASH;
+  const password = process.env.SEED_ADMIN_PASSWORD || randomBytes(32).toString('hex');
+  return bcrypt.hashSync(password, 12);
+}
+
+/**
+ * Runs on every production start: moves the demo accounts off the public dev password (databases seeded
+ * before this fix) and onto SEED_ADMIN_PASSWORD whenever that changes. Returns how many it changed.
+ */
+export async function secureDemoAccounts(): Promise<number> {
+  if (process.env.NODE_ENV !== 'production') return 0;
+  const wanted = process.env.SEED_ADMIN_PASSWORD;
+  const { rows } = await pool.query<{ id: string; password_hash: string }>(
+    'SELECT id, password_hash FROM users WHERE id = ANY($1::uuid[])',
+    [DEMO_USER_IDS]
+  );
+  const stale = rows.filter((r) =>
+    wanted ? !bcrypt.compareSync(wanted, r.password_hash) : r.password_hash === DEV_PASSWORD_HASH
+  );
+  for (const r of stale) {
+    await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [
+      demoPasswordHash(),
+      r.id,
+    ]);
+  }
+  if (stale.length) console.log(`[Seed] Secured ${stale.length} demo account password(s).`);
+  return stale.length;
+}
 
 export async function seedDatabase(): Promise<{
   problemsCount: number;
@@ -35,7 +78,7 @@ export async function seedDatabase(): Promise<{
 
   // 3. Seed Default Users
   console.log('[Seed] Seeding default users (admin, student)...');
-  const devPasswordHash = '$2a$10$iBVruH6tb4eMv2wF.RPFT.XkkhjjPIQ/wpSU2mR.2VuHIDY8E1T2y'; // bcrypt hash for password123 (CR-012)
+  const devPasswordHash = demoPasswordHash();
 
   await userRepo.save({
     id: '00000000-0000-0000-0000-000000000001',
@@ -55,7 +98,7 @@ export async function seedDatabase(): Promise<{
   // save() never overwrites a password on conflict, so reset the two dev accounts explicitly (CR-012).
   await pool.query('UPDATE users SET password_hash = $1 WHERE id = ANY($2::uuid[])', [
     devPasswordHash,
-    ['00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002'],
+    DEMO_USER_IDS,
   ]);
 
   // 4. Set Today's Daily Challenge (idempotent upsert on CURRENT_DATE)
@@ -106,7 +149,8 @@ export async function seedIfEmpty(): Promise<Awaited<ReturnType<typeof seedDatab
 // Direct execution: `node seed.js` always seeds (idempotent upserts); `--if-empty` only on a fresh database.
 if (require.main === module) {
   (process.argv.includes('--if-empty') ? seedIfEmpty() : seedDatabase())
-    .then((result) => {
+    .then(async (result) => {
+      await secureDemoAccounts();
       console.log('Seed summary:', result);
       return closePool().then(() => process.exit(0));
     })

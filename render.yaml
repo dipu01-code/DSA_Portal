@@ -1,7 +1,7 @@
 # Render Blueprint, free plan only (no card): PostgreSQL + one web service running the API and the
 # judging worker together (infra/render/start-all.js) + the static web app.
 # Deploy: Render Dashboard → New → Blueprint → pick this repo. Steps and costs: README "Deploy on Render".
-# The two `sync: false` values are asked for once, when the Blueprint is created.
+# The `sync: false` values are asked for once, when the Blueprint is created.
 
 databases:
   - name: dsa-portal-db
@@ -34,6 +34,12 @@ services:
           property: connectionString
       - key: JWT_SECRET
         generateValue: true
+      # Locks GET /metrics (no nginx in front on Render); send it as `Authorization: Bearer <value>`.
+      - key: METRICS_TOKEN
+        generateValue: true
+      # Password of the seeded admin@dsa.portal / student@dsa.portal accounts. Leave empty to keep them locked.
+      - key: SEED_ADMIN_PASSWORD
+        sync: false
       # Render's proxy sets X-Forwarded-For; without this every user shares one IP rate limit.
       - key: TRUST_PROXY
         value: 'true'

@@ -331,8 +331,10 @@ worker. If either stops, the service restarts.
    both values under the service's **Environment** tab, then redeploy the web app.
 5. Open `https://dsa-portal-web.onrender.com`. API docs: `https://dsa-portal-api.onrender.com/docs`.
 
-The automatic seed also creates two demo accounts (`admin@dsa.portal`, `student@dsa.portal`, password
-`password123`); change or delete them before sharing the site.
+The automatic seed also creates two demo accounts (`admin@dsa.portal`, `student@dsa.portal`). In production
+their password is the `SEED_ADMIN_PASSWORD` you set on the API service; leave it empty and both stay locked.
+(`password123` works only in local development.) `GET /metrics` needs `Authorization: Bearer <METRICS_TOKEN>`,
+a value Render generates.
 
 Free-plan limits (check Render's current terms): the API sleeps after about 15 minutes idle, so the first request
 then takes about a minute, and submissions are judged only while it is awake. One submission is judged at a time
@@ -376,8 +378,8 @@ docker compose -f infra/docker-compose.prod.yml ps
 ```
 
 The one-shot `migrate` service applies every pending migration before the API and worker start. The seed also
-creates two demo accounts (`admin@dsa.portal`, `student@dsa.portal`, password `password123`): change or delete
-them on a real deployment.
+creates two demo accounts (`admin@dsa.portal`, `student@dsa.portal`): with `NODE_ENV=production` their password
+is `SEED_ADMIN_PASSWORD`, or they stay locked when it is unset.
 
 - Liveness and readiness probes: `GET /health/live`, `GET /health/ready` (`GET /health` is an alias of ready).
 - Metrics: `GET /metrics` on the API (internal network only; nginx returns 404 for it), `WORKER_METRICS_PORT` on each worker; alert rules in `infra/monitoring/`.
